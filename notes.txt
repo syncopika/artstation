@@ -1,0 +1,6 @@
+https://stackoverflow.com/questions/53965259/makefile-that-covers-interfaces-h-files
+https://stackoverflow.com/questions/41205042/c-makefile-headers-and-cpp
+https://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
+https://github.com/ocornut/imgui/blob/master/examples/example_sdl_opengl3/main.cpp
+https://github.com/ocornut/imgui/issues/1303
+https://github.com/ocornut/imgui/issues/351
