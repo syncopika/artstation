@@ -150,6 +150,11 @@ int main(int, char**)
                 show_another_window = false;
             ImGui::End();
         }
+		
+		// game presentation window
+		ImGui::Begin("the game");
+		ImGui::Text("this is a game");
+		ImGui::End();
 
         // Rendering
         ImGui::Render();
