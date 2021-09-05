@@ -4,10 +4,13 @@ CXX = g++
 ECHO_MESSAGE = "MinGW"
 
 # -LC:\SDL2\lib -lSDL2main -lSDL2
-SDL_LIB = C:\libraries\SDL2-2.0.10\i686-w64-mingw32\lib -lSDL2main -lSDL2
+SDL_LIB = C:\SDL2\lib -lSDL2main -lSDL2
 
 # -IC:\SDL2\include\SDL2
-SDL_INCLUDE = C:\libraries\SDL2-2.0.10\i686-w64-mingw32\include\SDL2
+SDL_INCLUDE = C:\SDL2\include\SDL2
+
+# opengl
+OPENGL_INCLUDE = C:\MinGW\include\GL
 
 IMGUI_DIR = imgui
 SOURCES = boilerplate.cpp
@@ -25,10 +28,11 @@ OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 EXE = imgui_boilerplate
 
-	
-%.o:%.cpp
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
+# build main
+%.o:%.cpp stb_image.h
+	$(CXX) $(CXXFLAGS) -I$(OPENGL_INCLUDE) -c -o $@ $<
 
+# build imgui dependencies
 %.o:$(IMGUI_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 

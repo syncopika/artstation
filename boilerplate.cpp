@@ -1,13 +1,151 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
+#include "stb_image.h"
+#include <iostream>
+#include <vector>
 #include <stdio.h>
 #include <SDL.h>
+#include <GL/gl.h>
+#include <GL/glu.h>
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
 #else
 #include <SDL_opengl.h>
 #endif
+
+// https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+bool importImage(const char* filename, GLunit* tex, int* width, int* height){
+	int image_width = 0;
+	int image_height = 0;
+	unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
+	if(image_data == NULL){
+		return false;
+	}
+	
+	GLunit image_texture;
+	glGenTextures(1, &image_texture);
+	glBindTexture(GL_TEXTURE_2D, image_texture);
+	
+	// TODO: understand this stuff
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, G_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	
+	#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
+		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+	#endif
+	
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+	stbi_image_free(image_data);
+	
+	*tex = image_texture;
+	*width = image_width;
+	*height = image_height;
+	
+	return true;
+}
+
+void showDrawingCanvas(bool* p_open){
+	// set up canvas for drawing on
+	ImGui::Begin("multimedia thingy");
+	
+	static std::vector<ImVec2> canvasPoints;
+	static int lastPointIndex = -1;
+	//static ImVec2 scrolling(0.0f, 0.0f);
+	
+	ImVec4 brushColor = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
+	ImU32 yellow = ImColor(brushColor);
+	
+	ImVec2 canvas_pos0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
+	ImVec2 canvas_size = ImGui::GetContentRegionAvail();   // Resize canvas to what's available
+	if (canvas_size.x < 150.0f) canvas_size.x = 150.0f;
+	if (canvas_size.y < 150.0f) canvas_size.y = 150.0f;
+	ImVec2 canvas_pos1 = ImVec2(canvas_pos0.x + canvas_size.x, canvas_pos0.y + canvas_size.y);
+
+	// Draw border and background color
+	ImGuiIO& io = ImGui::GetIO();
+	ImDrawList* draw_list = ImGui::GetWindowDrawList();
+	draw_list->AddRectFilled(canvas_pos0, canvas_pos1, IM_COL32(50, 50, 50, 255));
+	draw_list->AddRect(canvas_pos0, canvas_pos1, IM_COL32(255, 255, 255, 255));
+
+	// This will catch our interactions
+	ImGui::InvisibleButton("drawingCanvas", canvas_size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+	
+	// Hovered - this is so we ensure that we take into account only mouse interactions that occur
+	// on this particular canvas. otherwise it could pick up mouse clicks that occur on other windows as well.
+	const bool is_hovered = ImGui::IsItemHovered();
+	const bool is_active = ImGui::IsItemActive();   // Held
+	
+	const ImVec2 origin(canvas_pos0.x, canvas_pos0.y); // Lock scrolled origin
+	const ImVec2 mouse_pos_in_canvas(io.MousePos.x - origin.x, io.MousePos.y - origin.y);
+
+	if (is_active && is_hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+	{
+		canvasPoints.push_back(mouse_pos_in_canvas);
+	}
+	
+	ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+	if (is_hovered && is_active && (drag_delta.x > 0 || drag_delta.y > 0))
+	{
+		canvasPoints.push_back(mouse_pos_in_canvas);
+	}
+	
+	int lastIdx = -1;
+	if (is_hovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+	{
+		// I think we might be setting the last element in the canvasPoints vector to
+		// mouse_pos_in_canvas? and since it's a reference, it works?
+		//canvasPoints.back() = mouse_pos_in_canvas;
+		lastIdx = canvasPoints.size() - 1;
+	}
+	
+	// need to redraw each event update
+	int numPoints = (int)canvasPoints.size();
+	for(int i = 0; i < numPoints; i++){
+		ImVec2 p1 = ImVec2(origin.x + canvasPoints[i].x, origin.y + canvasPoints[i].y);
+		ImVec2 p2 = ImVec2(origin.x + canvasPoints[i+1].x, origin.y + canvasPoints[i+1].y);
+		
+		if(i == lastPointIndex){
+			//std::cout << "last point index: " << lastPointIndex << std::endl;				
+			// don't draw a line from this point to the next
+			draw_list->AddCircleFilled(p1, 4.0f, yellow, 10.0f);
+			continue;
+		}
+		if(i < numPoints - 1){
+			// connect the points
+			draw_list->AddLine(p1, p2, yellow, 8.0f);
+		}else{
+			// just draw point
+			draw_list->AddCircle(p1, 4.0f, yellow, 10.0f);
+		}
+	}
+	
+	if(lastIdx > -1){
+		// keep track of the last point of the last segment drawn so we don't connect two separately drawn segments
+		// TODO: this idea isn't working :(
+		lastPointIndex = lastIdx;
+	}
+	
+	ImGui::End();
+}
+
+void showImageEditor(bool* p_open){
+	ImGui::Begin("image editor");
+	
+	static bool showImage = false;
+	
+	if(ImGui::Button("import image")){
+		showImage = true;
+	}
+	
+	if(showImage){
+		ImGui::Text("image imported");
+	}
+	
+	ImGui::End();
+}
 
 // Main code
 int main(int, char**)
@@ -87,7 +225,9 @@ int main(int, char**)
 
     // Our state
     bool show_demo_window = true;
-    bool show_another_window = false;
+    //bool show_another_window = false;
+	static bool showCanvasForDrawingFlag = true;
+	static bool showImageEditorFlag = true;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
@@ -118,7 +258,7 @@ int main(int, char**)
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
 
-        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+        /* 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
         {
             static float f = 0.0f;
             static int counter = 0;
@@ -139,9 +279,10 @@ int main(int, char**)
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
             ImGui::End();
-        }
+        }*/
 
         // 3. Show another simple window.
+		/*
         if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
@@ -149,12 +290,31 @@ int main(int, char**)
             if (ImGui::Button("Close Me"))
                 show_another_window = false;
             ImGui::End();
-        }
+        }*/
 		
 		// game presentation window
-		ImGui::Begin("the game");
-		ImGui::Text("this is a game");
-		ImGui::End();
+		// ideas: 
+		//	- have a subwindow for image editing + export
+		//  - have a subwindow for drawing? brush examples?
+		// 	- docked windows?
+		// 	- start working on learning how to import an fbx or obj model?
+		
+		if(showCanvasForDrawingFlag) 
+			showDrawingCanvas(&showCanvasForDrawingFlag);
+		
+/* 		if (ImGui::BeginMenuBar())
+		{
+			if (ImGui::BeginMenu("apps"))
+			{
+				ImGui::MenuItem("drawing canvas", NULL, &showCanvasForDrawing);
+				ImGui::MenuItem("image editor", NULL, &showImageEditor);
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenuBar();
+		} */
+		
+		if(showImageEditorFlag)
+			showImageEditor(&showImageEditorFlag);
 
         // Rendering
         ImGui::Render();
