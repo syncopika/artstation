@@ -1,7 +1,10 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
+
+#define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
+
 #include <iostream>
 #include <vector>
 #include <stdio.h>
@@ -15,7 +18,7 @@
 #endif
 
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-bool importImage(const char* filename, GLunit* tex, int* width, int* height){
+bool importImage(const char* filename, GLuint* tex, int* width, int* height){
 	int image_width = 0;
 	int image_height = 0;
 	unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
@@ -23,15 +26,15 @@ bool importImage(const char* filename, GLunit* tex, int* width, int* height){
 		return false;
 	}
 	
-	GLunit image_texture;
+	GLuint image_texture;
 	glGenTextures(1, &image_texture);
 	glBindTexture(GL_TEXTURE_2D, image_texture);
 	
 	// TODO: understand this stuff
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, G_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
 	
 	#if defined(GL_UNPACK_ROW_LENGTH) && !defined(__EMSCRIPTEN__)
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
