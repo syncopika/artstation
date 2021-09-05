@@ -7,6 +7,7 @@
 
 #include <iostream>
 #include <vector>
+#include <set>
 #include <stdio.h>
 #include <SDL.h>
 #include <GL/gl.h>
@@ -52,10 +53,14 @@ bool importImage(const char* filename, GLuint* tex, int* width, int* height){
 
 void showDrawingCanvas(bool* p_open){
 	// set up canvas for drawing on
+	// TODO: be able to clear canvas (need to empty canvasPoints and lastSegmentIndexes)
 	ImGui::Begin("multimedia thingy");
 	
 	static std::vector<ImVec2> canvasPoints;
-	static int lastPointIndex = -1;
+	
+	// use this to keep track of where each separately drawn segement ends because everything gets redrawn each re-render from the beginning
+	static std::set<int> lastSegmentIndexes;
+	
 	//static ImVec2 scrolling(0.0f, 0.0f);
 	
 	ImVec4 brushColor = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
@@ -99,7 +104,7 @@ void showDrawingCanvas(bool* p_open){
 	if (is_hovered && ImGui::IsMouseReleased(ImGuiMouseButton_Left))
 	{
 		// I think we might be setting the last element in the canvasPoints vector to
-		// mouse_pos_in_canvas? and since it's a reference, it works?
+		// mouse_pos_in_canvas? and since it's a reference, it works? don't think we need this though
 		//canvasPoints.back() = mouse_pos_in_canvas;
 		lastIdx = canvasPoints.size() - 1;
 	}
@@ -110,7 +115,7 @@ void showDrawingCanvas(bool* p_open){
 		ImVec2 p1 = ImVec2(origin.x + canvasPoints[i].x, origin.y + canvasPoints[i].y);
 		ImVec2 p2 = ImVec2(origin.x + canvasPoints[i+1].x, origin.y + canvasPoints[i+1].y);
 		
-		if(i == lastPointIndex){
+		if(lastSegmentIndexes.find(i) != lastSegmentIndexes.end()){
 			//std::cout << "last point index: " << lastPointIndex << std::endl;				
 			// don't draw a line from this point to the next
 			draw_list->AddCircleFilled(p1, 4.0f, yellow, 10.0f);
@@ -127,8 +132,7 @@ void showDrawingCanvas(bool* p_open){
 	
 	if(lastIdx > -1){
 		// keep track of the last point of the last segment drawn so we don't connect two separately drawn segments
-		// TODO: this idea isn't working :(
-		lastPointIndex = lastIdx;
+		lastSegmentIndexes.insert(lastIdx); //lastPointIndex = lastIdx;
 	}
 	
 	ImGui::End();
@@ -144,7 +148,25 @@ void showImageEditor(bool* p_open){
 	}
 	
 	if(showImage){
+		// TODO: get an open file dialog working?
+		// or at least let user enter path to image
+		// use a test image for now
+		int w = 0;
+		int h = 0;
+		GLuint texture = 0;
+		bool loaded = importImage("test_image.png", &texture, &w, &h);
+		IM_ASSERT(loaded);
+		
+		//ImGui::Begin("imported image");
+		ImGui::Text("size = %d x %d", w, h);
+		ImGui::Image((void *)(intptr_t)texture, ImVec2(w, h));
 		ImGui::Text("image imported");
+		
+		if (ImGui::Button("Open all")
+		ImGui::SameLine();
+		if (ImGui::Button("Close all"))
+		ImGui::SameLine();
+		//ImGui::End();
 	}
 	
 	ImGui::End();
@@ -305,7 +327,8 @@ int main(int, char**)
 		if(showCanvasForDrawingFlag) 
 			showDrawingCanvas(&showCanvasForDrawingFlag);
 		
-/* 		if (ImGui::BeginMenuBar())
+		/*
+ 		if (ImGui::BeginMenuBar())
 		{
 			if (ImGui::BeginMenu("apps"))
 			{
@@ -314,7 +337,8 @@ int main(int, char**)
 				ImGui::EndMenu();
 			}
 			ImGui::EndMenuBar();
-		} */
+		} 
+		*/
 		
 		if(showImageEditorFlag)
 			showImageEditor(&showImageEditorFlag);
