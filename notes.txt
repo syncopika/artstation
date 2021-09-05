@@ -1,9 +1,15 @@
+makefile stuff ==============================================
 https://stackoverflow.com/questions/53965259/makefile-that-covers-interfaces-h-files
 https://stackoverflow.com/questions/41205042/c-makefile-headers-and-cpp
 https://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
+
+imgui stuff =================================================
 https://github.com/ocornut/imgui/blob/master/examples/example_sdl_opengl3/main.cpp
 https://github.com/ocornut/imgui/issues/351 - dock panel layout
 https://gamedev.stackexchange.com/questions/140693/how-can-i-render-an-opengl-scene-into-an-imgui-window
 https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html
+
+opengl stuff ================================================
 https://www.gamedev.net/forums/topic/526599-modify-data-stored-in-gluint/4412971/
+https://stackoverflow.com/questions/48938930/pixel-access-with-glgetteximage

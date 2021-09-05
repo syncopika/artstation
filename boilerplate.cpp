@@ -142,6 +142,8 @@ void showImageEditor(bool* p_open){
 	ImGui::Begin("image editor");
 	
 	static bool showImage = false;
+	static bool grayscaleOn = false;
+	static bool invertedOn = false;
 	
 	if(ImGui::Button("import image")){
 		showImage = true;
@@ -162,11 +164,47 @@ void showImageEditor(bool* p_open){
 		ImGui::Image((void *)(intptr_t)texture, ImVec2(w, h));
 		ImGui::Text("image imported");
 		
-		if (ImGui::Button("Open all")
+		int pixelDataLen = w*h*4; // 4 because rgba
+		
+		if (ImGui::Button("grayscale") || grayscaleOn){
+			
+			grayscaleOn = true;
+			invertedOn = false;
+			
+			// grayscale the image data
+			unsigned char* pixelData = new unsigned char[pixelDataLen];
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
+			for(int i = 0; i < pixelDataLen - 4; i+=4){
+				unsigned char r = pixelData[i];
+				unsigned char g = pixelData[i+1];
+				unsigned char b = pixelData[i+2];
+				
+				unsigned char grey = (r+g+b)/3;
+				pixelData[i] = grey;
+				pixelData[i+1] = grey;
+				pixelData[i+2] = grey;
+			}
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			delete pixelData;
+		}
 		ImGui::SameLine();
-		if (ImGui::Button("Close all"))
+		
+		if (ImGui::Button("invert") || invertedOn) {
+			
+			grayscaleOn = false;
+			invertedOn = true;
+			
+			unsigned char* pixelData = new unsigned char[pixelDataLen];
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
+			for(int i = 0; i < pixelDataLen - 4; i+=4){
+				pixelData[i] = 255 - pixelData[i];
+				pixelData[i+1] = 255 - pixelData[i+1];
+				pixelData[i+2] = 255 - pixelData[i+2];
+			}
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			delete pixelData;
+		}
 		ImGui::SameLine();
-		//ImGui::End();
 	}
 	
 	ImGui::End();
