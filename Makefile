@@ -21,7 +21,9 @@ SOURCES += $(IMGUI_DIR)/imgui_impl_sdl.cpp $(IMGUI_DIR)/imgui_impl_opengl3.cpp
 
 # set up flags 
 CXXFLAGS = -Wall -Wformat -std=c++14 -I$(SDL_INCLUDE) -I$(IMGUI_DIR)
-LIBS = -lmingw32 -lgdi32 -lopengl32 -limm32 -static-libstdc++ -static-libgcc -L$(SDL_LIB)
+
+# add '-mwindows' to LIBS to prevent an additional comand line terminal from appearing (but it's useful for debugging)
+LIBS = -mwindows -lmingw32 -lgdi32 -lopengl32 -limm32 -static-libstdc++ -static-libgcc -L$(SDL_LIB)
 
 # object files needed 
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
