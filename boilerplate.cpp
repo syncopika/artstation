@@ -54,7 +54,7 @@ bool importImage(const char* filename, GLuint* tex, int* width, int* height){
 void showDrawingCanvas(bool* p_open){
 	// set up canvas for drawing on
 	// TODO: be able to clear canvas (need to empty canvasPoints and lastSegmentIndexes)
-	ImGui::Begin("multimedia thingy");
+	ImGui::Begin("drawing canvas");
 	
 	static std::vector<ImVec2> canvasPoints;
 	
@@ -142,35 +142,31 @@ void showImageEditor(bool* p_open){
 	ImGui::Begin("image editor");
 	
 	static bool showImage = false;
-	static bool grayscaleOn = false;
-	static bool invertedOn = false;
+	static GLuint texture = 0;
+	static int imageHeight = 0;
+	static int imageWidth = 0;
 	
 	if(ImGui::Button("import image")){
 		showImage = true;
+		// set the texture (the imported image) to be used for the filters
+		// until a new image is imported, the current one will be used
+		bool loaded = importImage("test_image.png", &texture, &imageWidth, &imageHeight);
+		IM_ASSERT(loaded);
 	}
 	
 	if(showImage){
 		// TODO: get an open file dialog working?
 		// or at least let user enter path to image
 		// use a test image for now
-		int w = 0;
-		int h = 0;
-		GLuint texture = 0;
-		bool loaded = importImage("test_image.png", &texture, &w, &h);
-		IM_ASSERT(loaded);
 		
 		//ImGui::Begin("imported image");
-		ImGui::Text("size = %d x %d", w, h);
-		ImGui::Image((void *)(intptr_t)texture, ImVec2(w, h));
+		ImGui::Text("size = %d x %d", imageWidth, imageHeight);
+		ImGui::Image((void *)(intptr_t)texture, ImVec2(imageWidth, imageHeight));
 		ImGui::Text("image imported");
 		
-		int pixelDataLen = w*h*4; // 4 because rgba
+		int pixelDataLen = imageWidth*imageHeight*4; // 4 because rgba
 		
-		if (ImGui::Button("grayscale") || grayscaleOn){
-			
-			grayscaleOn = true;
-			invertedOn = false;
-			
+		if (ImGui::Button("grayscale")){	
 			// grayscale the image data
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
@@ -184,16 +180,12 @@ void showImageEditor(bool* p_open){
 				pixelData[i+1] = grey;
 				pixelData[i+2] = grey;
 			}
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
 			delete pixelData;
 		}
 		ImGui::SameLine();
 		
-		if (ImGui::Button("invert") || invertedOn) {
-			
-			grayscaleOn = false;
-			invertedOn = true;
-			
+		if (ImGui::Button("invert")){		
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
 			for(int i = 0; i < pixelDataLen - 4; i+=4){
@@ -201,7 +193,7 @@ void showImageEditor(bool* p_open){
 				pixelData[i+1] = 255 - pixelData[i+1];
 				pixelData[i+2] = 255 - pixelData[i+2];
 			}
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
 			delete pixelData;
 		}
 		ImGui::SameLine();

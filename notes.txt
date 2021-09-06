@@ -13,3 +13,4 @@ https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html
 opengl stuff ================================================
 https://www.gamedev.net/forums/topic/526599-modify-data-stored-in-gluint/4412971/
 https://stackoverflow.com/questions/48938930/pixel-access-with-glgetteximage
+https://stackoverflow.com/questions/67638439/how-do-i-draw-an-obj-file-in-opengl-using-tinyobjloader
