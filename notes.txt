@@ -14,3 +14,8 @@ opengl stuff ================================================
 https://www.gamedev.net/forums/topic/526599-modify-data-stored-in-gluint/4412971/
 https://stackoverflow.com/questions/48938930/pixel-access-with-glgetteximage
 https://stackoverflow.com/questions/67638439/how-do-i-draw-an-obj-file-in-opengl-using-tinyobjloader
+http://www.opengl-tutorial.org/beginners-tutorials/tutorial-7-model-loading/
+http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
+https://stackoverflow.com/questions/14785007/can-i-use-opengl-for-off-screen-rendering
+https://open.gl/framebuffers
+https://learnopengl.com/Advanced-OpenGL/Framebuffers

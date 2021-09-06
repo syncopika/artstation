@@ -5,6 +5,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define TINYOBJLOADER_IMPLEMENTATION
+#include "tiny_obj_loader.h"
+
 #include <iostream>
 #include <vector>
 #include <set>
@@ -12,6 +15,7 @@
 #include <SDL.h>
 #include <GL/gl.h>
 #include <GL/glu.h>
+
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
 #else
@@ -41,7 +45,9 @@ bool importImage(const char* filename, GLuint* tex, int* width, int* height){
 		glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 	#endif
 	
+	// create the texture with the image data
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+	
 	stbi_image_free(image_data);
 	
 	*tex = image_texture;
@@ -49,6 +55,18 @@ bool importImage(const char* filename, GLuint* tex, int* width, int* height){
 	*height = image_height;
 	
 	return true;
+}
+
+std::string trimString(std::string str){
+	std::string trimmed("");
+	std::string::iterator it;
+	for(it = str.begin(); it < str.end(); it++){
+		if(*it != ' '){
+			trimmed += *it;
+		}
+	}
+	
+	return trimmed;
 }
 
 void showDrawingCanvas(bool* p_open){
@@ -135,6 +153,11 @@ void showDrawingCanvas(bool* p_open){
 		lastSegmentIndexes.insert(lastIdx); //lastPointIndex = lastIdx;
 	}
 	
+	if(ImGui::Button("clear")){
+		canvasPoints.clear();
+		lastSegmentIndexes.clear();
+	}
+	
 	ImGui::End();
 }
 
@@ -145,13 +168,23 @@ void showImageEditor(bool* p_open){
 	static GLuint texture = 0;
 	static int imageHeight = 0;
 	static int imageWidth = 0;
+	static char importImageFilepath[64] = "";
 	
-	if(ImGui::Button("import image")){
-		showImage = true;
+	bool importImageClicked = ImGui::Button("import image");
+	ImGui::SameLine();
+	ImGui::InputText("filepath", importImageFilepath, 64);
+	
+	if(importImageClicked){
 		// set the texture (the imported image) to be used for the filters
 		// until a new image is imported, the current one will be used
-		bool loaded = importImage("test_image.png", &texture, &imageWidth, &imageHeight);
-		IM_ASSERT(loaded);
+		
+		std::string filepath(importImageFilepath);
+		
+		if(trimString(filepath) != ""){
+			bool loaded = importImage(filepath.c_str(), &texture, &imageWidth, &imageHeight);
+			IM_ASSERT(loaded);
+			showImage = true;
+		}
 	}
 	
 	if(showImage){
@@ -197,6 +230,127 @@ void showImageEditor(bool* p_open){
 			delete pixelData;
 		}
 		ImGui::SameLine();
+	}
+	
+	ImGui::End();
+}
+
+// https://github.com/tinyobjloader/tinyobjloader
+void getObjModelInfo(auto& shapes, auto& attrib){
+	for (size_t s = 0; s < shapes.size(); s++) {
+	  // Loop over faces(polygon)
+	  size_t index_offset = 0;
+	  for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+		size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
+
+		// Loop over vertices in the face.
+		for (size_t v = 0; v < fv; v++) {
+		  // access to vertex
+		  tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+		  tinyobj::real_t vx = attrib.vertices[3*size_t(idx.vertex_index)+0];
+		  tinyobj::real_t vy = attrib.vertices[3*size_t(idx.vertex_index)+1];
+		  tinyobj::real_t vz = attrib.vertices[3*size_t(idx.vertex_index)+2];
+
+		  // Check if `normal_index` is zero or positive. negative = no normal data
+		  if (idx.normal_index >= 0) {
+			tinyobj::real_t nx = attrib.normals[3*size_t(idx.normal_index)+0];
+			tinyobj::real_t ny = attrib.normals[3*size_t(idx.normal_index)+1];
+			tinyobj::real_t nz = attrib.normals[3*size_t(idx.normal_index)+2];
+		  }
+
+		  // Check if `texcoord_index` is zero or positive. negative = no texcoord data
+		  if (idx.texcoord_index >= 0) {
+			tinyobj::real_t tx = attrib.texcoords[2*size_t(idx.texcoord_index)+0];
+			tinyobj::real_t ty = attrib.texcoords[2*size_t(idx.texcoord_index)+1];
+		  }
+
+		  // Optional: vertex colors
+		  // tinyobj::real_t red   = attrib.colors[3*size_t(idx.vertex_index)+0];
+		  // tinyobj::real_t green = attrib.colors[3*size_t(idx.vertex_index)+1];
+		  // tinyobj::real_t blue  = attrib.colors[3*size_t(idx.vertex_index)+2];
+		}
+		index_offset += fv;
+
+		// per-face material
+		//shapes[s].mesh.material_ids[f];
+	  }
+	}
+}
+
+void show3dModelViewer(bool* p_open){
+	ImGui::Begin("3d model viewer");
+	
+	std::string filepath = "battleship.obj";
+	tinyobj::ObjReaderConfig config;
+	config.mtl_search_path = "./";
+	
+	tinyobj::ObjReader reader;
+	
+	if(!reader.ParseFromFile(filepath, config)){
+		if(!reader.Error().empty()){
+			ImGui::Text("TinyObjReader: %s", (reader.Error()).c_str());
+			ImGui::End();
+		}
+	}else{
+		if(!reader.Warning().empty()){
+			ImGui::Text("TinyObjReader: %s", (reader.Warning()).c_str());
+		}
+		
+		auto& attrib = reader.GetAttrib();
+		auto& shapes = reader.GetShapes();
+		//auto& materials = reader.GetMaterials();
+		
+		ImGui::Text("model has %d shapes", shapes.size());
+		ImGui::Text("model has %d vertices", attrib.vertices.size());
+		
+		/* TODO: use GLEW (and probably GLM)
+		
+		// render scene to frame buffer -> texture -> use texture as image to render in the GUI
+		// create frame buffer
+		GLuint frameBuffer;
+		glGenFramebuffers(1, &frameBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		
+		// create the texture that the scene will be rendered to
+		static GLuint modelViewerTexture = 0;
+		glGenTextures(1, &modelViewerTexture);
+		glBindTexture(GL_TEXTURE_2D, modelViewerTexture); // any gl texture operations now will use this texture
+		
+		// set empty image 
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 500, 500, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		
+		// depth buffer
+		GLuint depth;
+		glGenRenderbuffers(1, &depth);
+		glBindRenderbuffer(GL_RENDERBUFFER, depth);
+		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 500, 500);
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
+		
+		// configure frame buffer to use texture
+		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, modelViewerTexture, 0);
+		
+		GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+		glDrawBuffers(1, drawBuffers);
+		
+		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+			ImGui::Text("something went wrong with the frame buffer! :(");
+		}else{
+			// draw the scene?
+			
+			// render frame buffer to the texture
+			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+			
+			// grab the scene's pixels and draw them an imgui image
+			int w = 500;
+			int h = 500;
+			int pixelDataLen = w*h*4;
+			unsigned char* pixelData = new unsigned char[pixelDataLen];
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			ImGui::Image((void *)(intptr_t)modelViewerTexture, ImVec2(w, h));
+		}
+		*/
 	}
 	
 	ImGui::End();
@@ -283,6 +437,7 @@ int main(int, char**)
     //bool show_another_window = false;
 	static bool showCanvasForDrawingFlag = true;
 	static bool showImageEditorFlag = true;
+	static bool show3dModelViewerFlag = true;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
@@ -353,9 +508,14 @@ int main(int, char**)
 		//  - have a subwindow for drawing? brush examples?
 		// 	- docked windows?
 		// 	- start working on learning how to import an fbx or obj model?
+		//  - audio stuff too? :D
 		
 		if(showCanvasForDrawingFlag) 
 			showDrawingCanvas(&showCanvasForDrawingFlag);
+		
+		if(show3dModelViewerFlag){
+			show3dModelViewer(&show3dModelViewerFlag);
+		}
 		
 		/*
  		if (ImGui::BeginMenuBar())
