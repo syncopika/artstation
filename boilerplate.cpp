@@ -13,8 +13,7 @@
 #include <set>
 #include <stdio.h>
 #include <SDL.h>
-#include <GL/gl.h>
-#include <GL/glu.h>
+#include <GL/glew.h>
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
@@ -280,6 +279,11 @@ void getObjModelInfo(auto& shapes, auto& attrib){
 void show3dModelViewer(bool* p_open){
 	ImGui::Begin("3d model viewer");
 	
+	GLenum err = glewInit();
+	if(GLEW_OK != err){
+		std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
+	}
+	
 	std::string filepath = "battleship.obj";
 	tinyobj::ObjReaderConfig config;
 	config.mtl_search_path = "./";
@@ -303,16 +307,16 @@ void show3dModelViewer(bool* p_open){
 		ImGui::Text("model has %d shapes", shapes.size());
 		ImGui::Text("model has %d vertices", attrib.vertices.size());
 		
-		/* TODO: use GLEW (and probably GLM)
+		// TODO: use GLEW (and probably GLM)
 		
 		// render scene to frame buffer -> texture -> use texture as image to render in the GUI
 		// create frame buffer
-		GLuint frameBuffer;
+		static GLuint frameBuffer;
 		glGenFramebuffers(1, &frameBuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		//glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 		
 		// create the texture that the scene will be rendered to
-		static GLuint modelViewerTexture = 0;
+/* 		static GLuint modelViewerTexture = 0;
 		glGenTextures(1, &modelViewerTexture);
 		glBindTexture(GL_TEXTURE_2D, modelViewerTexture); // any gl texture operations now will use this texture
 		
@@ -332,7 +336,7 @@ void show3dModelViewer(bool* p_open){
 		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, modelViewerTexture, 0);
 		
 		GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-		glDrawBuffers(1, drawBuffers);
+		glDrawBuffers(1, drawBuffers); */
 		
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 			ImGui::Text("something went wrong with the frame buffer! :(");
@@ -340,7 +344,7 @@ void show3dModelViewer(bool* p_open){
 			// draw the scene?
 			
 			// render frame buffer to the texture
-			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+/* 			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 			
 			// grab the scene's pixels and draw them an imgui image
 			int w = 500;
@@ -348,9 +352,8 @@ void show3dModelViewer(bool* p_open){
 			int pixelDataLen = w*h*4;
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
-			ImGui::Image((void *)(intptr_t)modelViewerTexture, ImVec2(w, h));
+			ImGui::Image((void *)(intptr_t)modelViewerTexture, ImVec2(w, h)); */
 		}
-		*/
 	}
 	
 	ImGui::End();

@@ -9,8 +9,9 @@ SDL_LIB = C:\libraries\SDL2-2.0.10\i686-w64-mingw32\lib -lSDL2main -lSDL2
 # -IC:\SDL2\include\SDL2
 SDL_INCLUDE = C:\libraries\SDL2-2.0.10\i686-w64-mingw32\include\SDL2
 
-# opengl
-OPENGL_INCLUDE = C:\MinGW\include\GL
+# opengl (if you don't want to do 3d stuff, just using MinGW\include\GL should be fine. otherwise, we use GLEW)
+#C:\MinGW\include\GL
+OPENGL_INCLUDE = C:\libraries\glew-2.1.0\include
 
 # other dependencies (like stb_image.h, tiny_obj_loader.h)
 OTHER_DEPS = stb_image.h tiny_obj_loader.h
@@ -26,7 +27,8 @@ SOURCES += $(IMGUI_DIR)/imgui_impl_sdl.cpp $(IMGUI_DIR)/imgui_impl_opengl3.cpp
 CXXFLAGS = -Wall -Wformat -std=c++14 -I$(SDL_INCLUDE) -I$(IMGUI_DIR)
 
 # add '-mwindows' to LIBS to prevent an additional comand line terminal from appearing (but it's useful for debugging)
-LIBS = -lmingw32 -lgdi32 -lopengl32 -limm32 -static-libstdc++ -static-libgcc -L$(SDL_LIB)
+GLEW_LIBS = -lglew32 -lglu32
+LIBS = -lmingw32 -lgdi32 $(GLEW_LIBS) -lopengl32 -limm32 -static-libstdc++ -static-libgcc -L$(SDL_LIB)
 
 # object files needed 
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
