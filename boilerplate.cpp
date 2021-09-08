@@ -30,6 +30,7 @@ bool importImage(const char* filename, GLuint* tex, int* width, int* height){
 		return false;
 	}
 	
+	glActiveTexture(GL_TEXTURE0);
 	GLuint image_texture;
 	glGenTextures(1, &image_texture);
 	glBindTexture(GL_TEXTURE_2D, image_texture);
@@ -181,27 +182,31 @@ void showImageEditor(bool* p_open){
 		
 		if(trimString(filepath) != ""){
 			bool loaded = importImage(filepath.c_str(), &texture, &imageWidth, &imageHeight);
-			IM_ASSERT(loaded);
-			showImage = true;
+			if(loaded){
+				showImage = true;
+			}else{
+				ImGui::Text("import image failed");
+			}
 		}
 	}
 	
 	if(showImage){
 		// TODO: get an open file dialog working?
-		// or at least let user enter path to image
-		// use a test image for now
-		
-		//ImGui::Begin("imported image");
 		ImGui::Text("size = %d x %d", imageWidth, imageHeight);
 		ImGui::Image((void *)(intptr_t)texture, ImVec2(imageWidth, imageHeight));
-		ImGui::Text("image imported");
+		//ImGui::Text("image imported");
 		
 		int pixelDataLen = imageWidth*imageHeight*4; // 4 because rgba
+		
+		glActiveTexture(GL_TEXTURE0);
 		
 		if (ImGui::Button("grayscale")){	
 			// grayscale the image data
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
+			
+			//printf("rgb: %d %d %d \n", pixelData[0], pixelData[1], pixelData[2]);
+			
 			for(int i = 0; i < pixelDataLen - 4; i+=4){
 				unsigned char r = pixelData[i];
 				unsigned char g = pixelData[i+1];
@@ -307,45 +312,46 @@ void show3dModelViewer(bool* p_open){
 		ImGui::Text("model has %d shapes", shapes.size());
 		ImGui::Text("model has %d vertices", attrib.vertices.size());
 		
-		// TODO: use GLEW (and probably GLM)
-		
 		// render scene to frame buffer -> texture -> use texture as image to render in the GUI
 		// create frame buffer
-		static GLuint frameBuffer;
+		GLuint frameBuffer;
 		glGenFramebuffers(1, &frameBuffer);
-		//glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
 		
-		// create the texture that the scene will be rendered to
-/* 		static GLuint modelViewerTexture = 0;
+		// create the texture that the scene will be rendered to (it will be empty initially)
+		glActiveTexture(GL_TEXTURE1);
+ 		GLuint modelViewerTexture;
 		glGenTextures(1, &modelViewerTexture);
 		glBindTexture(GL_TEXTURE_2D, modelViewerTexture); // any gl texture operations now will use this texture
-		
-		// set empty image 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 500, 500, 0, GL_RGB, GL_UNSIGNED_BYTE, 0);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 500, 500, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
+		glBindTexture(GL_TEXTURE_2D, 0); // unbind the texture
+
+		// configure frame buffer to use texture
+		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, modelViewerTexture, 0);
 		
 		// depth buffer
 		GLuint depth;
 		glGenRenderbuffers(1, &depth);
 		glBindRenderbuffer(GL_RENDERBUFFER, depth);
 		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 500, 500);
+		glBindRenderbuffer(GL_RENDERBUFFER, 0); // unbind after allocating storage
 		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
 		
-		// configure frame buffer to use texture
-		glFramebufferTexture(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, modelViewerTexture, 0);
-		
-		GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-		glDrawBuffers(1, drawBuffers); */
+		//GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+		//glDrawBuffers(1, drawBuffers);
 		
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-			ImGui::Text("something went wrong with the frame buffer! :(");
+			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
 		}else{
 			// draw the scene?
 			
 			// render frame buffer to the texture
-/* 			glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+			//glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+			glBindFramebuffer(GL_FRAMEBUFFER, 0); // TODO: understand the importance of using 0 here
 			
+			/*
 			// grab the scene's pixels and draw them an imgui image
 			int w = 500;
 			int h = 500;

@@ -19,3 +19,5 @@ http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-text
 https://stackoverflow.com/questions/14785007/can-i-use-opengl-for-off-screen-rendering
 https://open.gl/framebuffers
 https://learnopengl.com/Advanced-OpenGL/Framebuffers
+https://github.com/ocornut/imgui/issues/1408 -> ImGui Window is not displaying correctly a texture (maybe useful?)
+https://github.com/ocornut/imgui/issues/90 -> learned about glActiveTexture here! useful for making sure multiple textures don't interfere with each other
