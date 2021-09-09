@@ -21,3 +21,4 @@ https://open.gl/framebuffers
 https://learnopengl.com/Advanced-OpenGL/Framebuffers
 https://github.com/ocornut/imgui/issues/1408 -> ImGui Window is not displaying correctly a texture (maybe useful?)
 https://github.com/ocornut/imgui/issues/90 -> learned about glActiveTexture here! useful for making sure multiple textures don't interfere with each other
+https://stackoverflow.com/questions/39093499/qt-opengl-gldrawelements-and-gldrawarray-show-only-blank-screen -> set up vbo and vao first, then shaders

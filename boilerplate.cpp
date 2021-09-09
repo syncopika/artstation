@@ -65,7 +65,6 @@ std::string trimString(std::string str){
 			trimmed += *it;
 		}
 	}
-	
 	return trimmed;
 }
 
@@ -281,13 +280,123 @@ void getObjModelInfo(auto& shapes, auto& attrib){
 	}
 }
 
+// 3d stuff - TODO: move elsewhere
+// shaders
+const char* vertexShaderSource = R"glsl(
+	#version 150 core
+
+	in vec2 position;
+
+	void main()
+	{
+		gl_Position = vec4(position, 0.0, 1.0);
+	}
+)glsl";
+
+const char* fragShaderSource = R"glsl(
+	#version 150 core
+
+	out vec4 outColor;
+
+	void main()
+	{
+		outColor = vec4(1.0, 1.0, 1.0, 1.0);
+	}
+)glsl";
+
+void setupShaders(){
+	// compile vertex shader
+	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
+	glCompileShader(vertexShader);
+	
+	GLint status;
+	
+	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+	if(status != GL_TRUE){
+		std::cout << "error compiling vertex shader!" << std::endl;
+	}
+	
+	// compile frag shader
+	GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fragmentShader, 1, &fragShaderSource, NULL);
+	glCompileShader(fragmentShader);
+	
+	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
+	if(status != GL_TRUE){
+		std::cout << "error compiling fragment shader!" << std::endl;
+	}
+	
+	// combine shaders into a program
+	GLuint shaderProgram = glCreateProgram();
+	glAttachShader(shaderProgram, vertexShader);
+	glAttachShader(shaderProgram, fragmentShader);
+	
+	glBindFragDataLocation(shaderProgram, 0, "outColor");
+	glLinkProgram(shaderProgram);
+	glUseProgram(shaderProgram);
+	
+	// set up pos attrib from vertex shader
+	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
+	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glEnableVertexAttribArray(posAttrib);
+}
+
+void setupTriangle(){
+	float vertices[] = {
+		-0.5f, 0.5f,
+		0.0f, -0.5f,
+		-1.0f, -0.5f
+	};
+	
+	// set up vertex buffer
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+}
+
+// return the GLuint of the texture used for offscreen rendering
+GLuint setupOffscreenFramebuffer(){
+	// render scene to frame buffer -> texture -> use texture as image to render in the GUI
+	// create frame buffer
+	GLuint frameBuffer;
+	glGenFramebuffers(1, &frameBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+	
+	// create the texture that the scene will be rendered to (it will be empty initially)
+	glActiveTexture(GL_TEXTURE1);
+	GLuint modelViewerTexture;
+	glGenTextures(1, &modelViewerTexture);
+	glBindTexture(GL_TEXTURE_2D, modelViewerTexture); // any gl texture operations now will use this texture
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 500, 500, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
+	glBindTexture(GL_TEXTURE_2D, 0); // unbind the texture
+
+	// configure frame buffer to use texture
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, modelViewerTexture, 0);
+	
+	// depth buffer
+	GLuint depth;
+	glGenRenderbuffers(1, &depth);
+	glBindRenderbuffer(GL_RENDERBUFFER, depth);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 500, 500);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0); // unbind after allocating storage
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
+	
+	//GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
+	//glDrawBuffers(1, drawBuffers);
+	
+	return modelViewerTexture;
+}
+
 void show3dModelViewer(bool* p_open){
 	ImGui::Begin("3d model viewer");
-	
-	GLenum err = glewInit();
-	if(GLEW_OK != err){
-		std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
-	}
 	
 	std::string filepath = "battleship.obj";
 	tinyobj::ObjReaderConfig config;
@@ -312,35 +421,8 @@ void show3dModelViewer(bool* p_open){
 		ImGui::Text("model has %d shapes", shapes.size());
 		ImGui::Text("model has %d vertices", attrib.vertices.size());
 		
-		// render scene to frame buffer -> texture -> use texture as image to render in the GUI
-		// create frame buffer
-		GLuint frameBuffer;
-		glGenFramebuffers(1, &frameBuffer);
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		
-		// create the texture that the scene will be rendered to (it will be empty initially)
-		glActiveTexture(GL_TEXTURE1);
- 		GLuint modelViewerTexture;
-		glGenTextures(1, &modelViewerTexture);
-		glBindTexture(GL_TEXTURE_2D, modelViewerTexture); // any gl texture operations now will use this texture
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 500, 500, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
-		glBindTexture(GL_TEXTURE_2D, 0); // unbind the texture
-
-		// configure frame buffer to use texture
-		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, modelViewerTexture, 0);
-		
-		// depth buffer
-		GLuint depth;
-		glGenRenderbuffers(1, &depth);
-		glBindRenderbuffer(GL_RENDERBUFFER, depth);
-		glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 500, 500);
-		glBindRenderbuffer(GL_RENDERBUFFER, 0); // unbind after allocating storage
-		glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
-		
-		//GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
-		//glDrawBuffers(1, drawBuffers);
+		// set up for rendering scene to frame buffer -> texture -> use texture as image to render in the GUI
+		GLuint textureRef = setupOffscreenFramebuffer();
 		
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
@@ -349,16 +431,20 @@ void show3dModelViewer(bool* p_open){
 			
 			// render frame buffer to the texture
 			//glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-			glBindFramebuffer(GL_FRAMEBUFFER, 0); // TODO: understand the importance of using 0 here
 			
-			/*
-			// grab the scene's pixels and draw them an imgui image
+			// draw the triangle
+			glDrawArrays(GL_TRIANGLES, 0, 3);
+			
+			// grab the texture and draw them an imgui image
+			glActiveTexture(GL_TEXTURE1);
 			int w = 500;
 			int h = 500;
 			int pixelDataLen = w*h*4;
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
-			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
-			ImGui::Image((void *)(intptr_t)modelViewerTexture, ImVec2(w, h)); */
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
+			ImGui::Image((void *)(intptr_t)textureRef, ImVec2(w, h));
+			
+			glBindFramebuffer(GL_FRAMEBUFFER, 0); // use default framebuffer (show the gui window)
 		}
 	}
 	
@@ -448,7 +534,15 @@ int main(int, char**)
 	static bool showImageEditorFlag = true;
 	static bool show3dModelViewerFlag = true;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-
+	
+	// set up GLEW
+	GLenum err = glewInit();
+	if(GLEW_OK != err){
+		std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
+	}
+	setupTriangle();
+	setupShaders();
+	
     // Main loop
     bool done = false;
     while (!done)
