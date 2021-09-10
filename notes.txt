@@ -1,6 +1,31 @@
+makefile stuff ==============================================
 https://stackoverflow.com/questions/53965259/makefile-that-covers-interfaces-h-files
 https://stackoverflow.com/questions/41205042/c-makefile-headers-and-cpp
 https://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
+
+imgui stuff =================================================
 https://github.com/ocornut/imgui/blob/master/examples/example_sdl_opengl3/main.cpp
-https://github.com/ocornut/imgui/issues/1303
-https://github.com/ocornut/imgui/issues/351
+https://github.com/ocornut/imgui/issues/351 - dock panel layout
+https://gamedev.stackexchange.com/questions/140693/how-can-i-render-an-opengl-scene-into-an-imgui-window
+https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html
+
+opengl stuff ================================================
+https://www.gamedev.net/forums/topic/526599-modify-data-stored-in-gluint/4412971/
+https://stackoverflow.com/questions/48938930/pixel-access-with-glgetteximage
+https://stackoverflow.com/questions/67638439/how-do-i-draw-an-obj-file-in-opengl-using-tinyobjloader
+http://www.opengl-tutorial.org/beginners-tutorials/tutorial-7-model-loading/
+http://www.opengl-tutorial.org/intermediate-tutorials/tutorial-14-render-to-texture/
+https://stackoverflow.com/questions/14785007/can-i-use-opengl-for-off-screen-rendering
+https://open.gl/framebuffers
+https://learnopengl.com/Advanced-OpenGL/Framebuffers
+https://github.com/ocornut/imgui/issues/1408 -> ImGui Window is not displaying correctly a texture (maybe useful?)
+https://github.com/ocornut/imgui/issues/90 -> learned about glActiveTexture here! useful for making sure multiple textures don't interfere with each other
+https://stackoverflow.com/questions/39093499/qt-opengl-gldrawelements-and-gldrawarray-show-only-blank-screen 
+  -> set up vbo and vao first, then shaders (but also if I had followed the open.gl tutorial more carefully I should've noticed this -_-) 
+https://learnopengl.com/Getting-started/Shaders
+
+
+TODO:
+- move 3d stuff to a separate file?
+- get each 'app' in its own menu item and not have them simultaneous?
