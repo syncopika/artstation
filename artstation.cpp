@@ -9,6 +9,7 @@
 #include "tiny_obj_loader.h"
 
 #include <iostream>
+#include <chrono>
 #include <vector>
 #include <set>
 #include <stdio.h>
@@ -204,8 +205,6 @@ void showImageEditor(bool* p_open){
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
 			
-			//printf("rgb: %d %d %d \n", pixelData[0], pixelData[1], pixelData[2]);
-			
 			for(int i = 0; i < pixelDataLen - 4; i+=4){
 				unsigned char r = pixelData[i];
 				unsigned char g = pixelData[i+1];
@@ -286,9 +285,11 @@ const char* vertexShaderSource = R"glsl(
 	#version 150 core
 
 	in vec2 position;
+	out vec2 pos;
 
 	void main()
 	{
+		pos = position;
 		gl_Position = vec4(position, 0.0, 1.0);
 	}
 )glsl";
@@ -296,14 +297,21 @@ const char* vertexShaderSource = R"glsl(
 const char* fragShaderSource = R"glsl(
 	#version 150 core
 
+	uniform float time;
+
+	in vec2 pos;
 	out vec4 outColor;
 
 	void main()
 	{
-		outColor = vec4(1.0, 1.0, 1.0, 1.0);
+		float newR = cos(time*pos.x);
+		float newG = sin(time*pos.y);
+		float newB = cos(time*(pos.x+pos.y));
+		outColor = vec4(newR, newG, newB, 1.0);
 	}
 )glsl";
 
+GLuint shaderProgram;
 void setupShaders(){
 	// compile vertex shader
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -328,7 +336,7 @@ void setupShaders(){
 	}
 	
 	// combine shaders into a program
-	GLuint shaderProgram = glCreateProgram();
+	shaderProgram = glCreateProgram();
 	glAttachShader(shaderProgram, vertexShader);
 	glAttachShader(shaderProgram, fragmentShader);
 	
@@ -336,7 +344,7 @@ void setupShaders(){
 	glLinkProgram(shaderProgram);
 	glUseProgram(shaderProgram);
 	
-	// set up pos attrib from vertex shader
+	// set up position attribute in vertex shader
 	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
 	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(posAttrib);
@@ -344,42 +352,42 @@ void setupShaders(){
 
 void setupTriangle(){
 	float vertices[] = {
-		-0.5f, 0.5f,
-		0.0f, -0.5f,
-		-1.0f, -0.5f
+		0.0f, 0.5f,
+		0.5f, 0.0f,
+		-0.5f, 0.0f
 	};
 	
-	// set up vertex buffer
+	// vertex buffer object
 	GLuint vbo;
 	glGenBuffers(1, &vbo);
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	
+	// vertex array object
 	GLuint vao;
 	glGenVertexArrays(1, &vao);
 	glBindVertexArray(vao);
 }
 
 // return the GLuint of the texture used for offscreen rendering
-GLuint setupOffscreenFramebuffer(){
+// TODO: pass in dimensions later?
+void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
 	// render scene to frame buffer -> texture -> use texture as image to render in the GUI
 	// create frame buffer
-	GLuint frameBuffer;
-	glGenFramebuffers(1, &frameBuffer);
-	glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+	glGenFramebuffers(1, frameBuffer);
+	glBindFramebuffer(GL_FRAMEBUFFER, *frameBuffer);
 	
 	// create the texture that the scene will be rendered to (it will be empty initially)
 	glActiveTexture(GL_TEXTURE1);
-	GLuint modelViewerTexture;
-	glGenTextures(1, &modelViewerTexture);
-	glBindTexture(GL_TEXTURE_2D, modelViewerTexture); // any gl texture operations now will use this texture
+	glGenTextures(1, texture);
+	glBindTexture(GL_TEXTURE_2D, *texture); // any gl texture operations now will use this texture
 	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 500, 500, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
 	glBindTexture(GL_TEXTURE_2D, 0); // unbind the texture
 
 	// configure frame buffer to use texture
-	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, modelViewerTexture, 0);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, *texture, 0);
 	
 	// depth buffer
 	GLuint depth;
@@ -391,11 +399,9 @@ GLuint setupOffscreenFramebuffer(){
 	
 	//GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
 	//glDrawBuffers(1, drawBuffers);
-	
-	return modelViewerTexture;
 }
 
-void show3dModelViewer(bool* p_open){
+void show3dModelViewer(bool* p_open, GLuint offscreenFrameBuf, GLuint offscreenTexture, auto startTime){
 	ImGui::Begin("3d model viewer");
 	
 	std::string filepath = "battleship.obj";
@@ -421,30 +427,34 @@ void show3dModelViewer(bool* p_open){
 		ImGui::Text("model has %d shapes", shapes.size());
 		ImGui::Text("model has %d vertices", attrib.vertices.size());
 		
-		// set up for rendering scene to frame buffer -> texture -> use texture as image to render in the GUI
-		GLuint textureRef = setupOffscreenFramebuffer();
-		
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
 		}else{
-			// draw the scene?
+			// draw the triangle to the offscreen frame buffer
+			// adjust the glviewport to be drawn to so the image comes out correctly
+			glBindFramebuffer(GL_FRAMEBUFFER, offscreenFrameBuf);
+			glViewport(0, 0, 500, 500);
 			
-			// render frame buffer to the texture
-			//glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
+			// for shaders
+			auto now = std::chrono::high_resolution_clock::now();
+			float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
+			GLuint t = glGetUniformLocation(shaderProgram, "time");
+			glUniform1f(t, time);
 			
-			// draw the triangle
 			glDrawArrays(GL_TRIANGLES, 0, 3);
 			
-			// grab the texture and draw them an imgui image
+			// grab the offscreen texture and draw it to an imgui image
 			glActiveTexture(GL_TEXTURE1);
 			int w = 500;
 			int h = 500;
-			int pixelDataLen = w*h*4;
+			int pixelDataLen = w*h*3;
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
-			ImGui::Image((void *)(intptr_t)textureRef, ImVec2(w, h));
+			ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(w, h));
+			delete pixelData;
 			
-			glBindFramebuffer(GL_FRAMEBUFFER, 0); // use default framebuffer (show the gui window)
+			// use default framebuffer again (show the gui window)
+			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 	}
 	
@@ -492,7 +502,7 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow("ArtStation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -529,7 +539,6 @@ int main(int, char**)
 
     // Our state
     bool show_demo_window = true;
-    //bool show_another_window = false;
 	static bool showCanvasForDrawingFlag = true;
 	static bool showImageEditorFlag = true;
 	static bool show3dModelViewerFlag = true;
@@ -542,6 +551,14 @@ int main(int, char**)
 	}
 	setupTriangle();
 	setupShaders();
+	
+	// set up for rendering scene to frame buffer -> texture -> use texture as image to render in the GUI
+	GLuint offscreenFrameBuf;
+	GLuint offscreenTexture;
+	setupOffscreenFramebuffer(&offscreenFrameBuf, &offscreenTexture);
+	
+	// for fun shaders
+	auto startTime = std::chrono::high_resolution_clock::now();
 	
     // Main loop
     bool done = false;
@@ -570,40 +587,6 @@ int main(int, char**)
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
             ImGui::ShowDemoWindow(&show_demo_window);
-
-        /* 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-        {
-            static float f = 0.0f;
-            static int counter = 0;
-
-            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
-
-            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-            ImGui::Checkbox("Another Window", &show_another_window);
-
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
-
-            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                counter++;
-            ImGui::SameLine();
-            ImGui::Text("counter = %d", counter);
-
-            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-            ImGui::End();
-        }*/
-
-        // 3. Show another simple window.
-		/*
-        if (show_another_window)
-        {
-            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-            ImGui::Text("Hello from another window!");
-            if (ImGui::Button("Close Me"))
-                show_another_window = false;
-            ImGui::End();
-        }*/
 		
 		// game presentation window
 		// ideas: 
@@ -616,8 +599,11 @@ int main(int, char**)
 		if(showCanvasForDrawingFlag) 
 			showDrawingCanvas(&showCanvasForDrawingFlag);
 		
+		if(showImageEditorFlag)
+			showImageEditor(&showImageEditorFlag);
+		
 		if(show3dModelViewerFlag){
-			show3dModelViewer(&show3dModelViewerFlag);
+			show3dModelViewer(&show3dModelViewerFlag, offscreenFrameBuf, offscreenTexture, startTime);
 		}
 		
 		/*
@@ -632,9 +618,6 @@ int main(int, char**)
 			ImGui::EndMenuBar();
 		} 
 		*/
-		
-		if(showImageEditorFlag)
-			showImageEditor(&showImageEditorFlag);
 
         // Rendering
         ImGui::Render();

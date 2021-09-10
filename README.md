@@ -1,11 +1,12 @@
-# multimedia thingy using Dear ImGUI, SDL2 and OpenGL (WIP)    
+# artstation - a multimedia thingy using Dear ImGUI, SDL2 and OpenGL 3 (WIP)    
 just trying out Dear ImGUI and OpenGL for a bunch of small apps like a drawing canvas, image editor, and more!    
+there's not much to see at the moment though.    
     
 ![current look](demo.gif)
 	
 ## dependencies:    
 - [SDL2](https://www.libsdl.org/download-2.0.php)(the development library)    
-- OpenGL3 (came with MinGW)    
+- OpenGL 3 (came with MinGW v6.3.0)    
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)   
 - [tiny_object_loader.h](https://github.com/tinyobjloader/tinyobjloader)
 - [GLEW](http://glew.sourceforge.net/install.html)   

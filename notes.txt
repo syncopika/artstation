@@ -21,4 +21,11 @@ https://open.gl/framebuffers
 https://learnopengl.com/Advanced-OpenGL/Framebuffers
 https://github.com/ocornut/imgui/issues/1408 -> ImGui Window is not displaying correctly a texture (maybe useful?)
 https://github.com/ocornut/imgui/issues/90 -> learned about glActiveTexture here! useful for making sure multiple textures don't interfere with each other
-https://stackoverflow.com/questions/39093499/qt-opengl-gldrawelements-and-gldrawarray-show-only-blank-screen -> set up vbo and vao first, then shaders
+https://stackoverflow.com/questions/39093499/qt-opengl-gldrawelements-and-gldrawarray-show-only-blank-screen 
+  -> set up vbo and vao first, then shaders (but also if I had followed the open.gl tutorial more carefully I should've noticed this -_-) 
+https://learnopengl.com/Getting-started/Shaders
+
+
+TODO:
+- move 3d stuff to a separate file?
+- get each 'app' in its own menu item and not have them simultaneous?

@@ -17,7 +17,7 @@ OPENGL_INCLUDE = C:\libraries\glew-2.1.0\include
 OTHER_DEPS = stb_image.h tiny_obj_loader.h
 
 IMGUI_DIR = imgui
-SOURCES = boilerplate.cpp
+SOURCES = artstation.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 
 # specific to our backend (sdl + opengl)
@@ -33,7 +33,7 @@ LIBS = -lmingw32 -lgdi32 $(GLEW_LIBS) -lopengl32 -limm32 -static-libstdc++ -stat
 # object files needed 
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
-EXE = imgui_boilerplate
+EXE = artstation
 
 # build main
 %.o:%.cpp $(OTHER_DEPS)
