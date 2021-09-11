@@ -23,18 +23,18 @@
 #endif
 
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-bool importImage(const char* filename, GLuint* tex, int* width, int* height){
-	int image_width = 0;
-	int image_height = 0;
-	unsigned char* image_data = stbi_load(filename, &image_width, &image_height, NULL, 4);
-	if(image_data == NULL){
+bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* width, int* height){
+	int imageWidth = 0;
+	int imageHeight = 0;
+	unsigned char* imageData = stbi_load(filename, &imageWidth, &imageHeight, NULL, 4);
+	if(imageData == NULL){
 		return false;
 	}
 	
 	glActiveTexture(GL_TEXTURE0);
-	GLuint image_texture;
-	glGenTextures(1, &image_texture);
-	glBindTexture(GL_TEXTURE_2D, image_texture);
+	GLuint imageTexture;
+	glGenTextures(1, &imageTexture);
+	glBindTexture(GL_TEXTURE_2D, imageTexture);
 	
 	// TODO: understand this stuff
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -47,13 +47,25 @@ bool importImage(const char* filename, GLuint* tex, int* width, int* height){
 	#endif
 	
 	// create the texture with the image data
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
 	
-	stbi_image_free(image_data);
+	// store the image in another texture that we won't touch (but just read from)
+	glActiveTexture(GL_TEXTURE2);
+	GLuint imageTexture2;
+	glGenTextures(1, &imageTexture2);
+	glBindTexture(GL_TEXTURE_2D, imageTexture2);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
 	
-	*tex = image_texture;
-	*width = image_width;
-	*height = image_height;
+	stbi_image_free(imageData);
+	
+	*tex = imageTexture;
+	*originalImage = imageTexture2;
+	*width = imageWidth;
+	*height = imageHeight;
 	
 	return true;
 }
@@ -74,15 +86,24 @@ void showDrawingCanvas(bool* p_open){
 	// TODO: be able to clear canvas (need to empty canvasPoints and lastSegmentIndexes)
 	ImGui::Begin("drawing canvas");
 	
+	// color wheel stuff
+	static ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // note this isn't assignment but just initialization
+	static bool ref_color = false;
+	static ImVec4 ref_color_v(1.0f, 0.0f, 1.0f, 0.5f);
+	ImGuiColorEditFlags flags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_PickerHueWheel;
+	
+	// keep track of canvas data
 	static std::vector<ImVec2> canvasPoints;
 	
 	// use this to keep track of where each separately drawn segement ends because everything gets redrawn each re-render from the beginning
 	static std::set<int> lastSegmentIndexes;
 	
+	// keep track of colors
+	static std::vector<ImU32> canvasPointColors;
+	
 	//static ImVec2 scrolling(0.0f, 0.0f);
 	
-	ImVec4 brushColor = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
-	ImU32 yellow = ImColor(brushColor);
+	ImU32 selectedColor = ImColor(color);
 	
 	ImVec2 canvas_pos0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
 	ImVec2 canvas_size = ImGui::GetContentRegionAvail();   // Resize canvas to what's available
@@ -110,12 +131,14 @@ void showDrawingCanvas(bool* p_open){
 	if (is_active && is_hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 	{
 		canvasPoints.push_back(mouse_pos_in_canvas);
+		canvasPointColors.push_back(selectedColor);
 	}
 	
 	ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
 	if (is_hovered && is_active && (drag_delta.x > 0 || drag_delta.y > 0))
 	{
 		canvasPoints.push_back(mouse_pos_in_canvas);
+		canvasPointColors.push_back(selectedColor);
 	}
 	
 	int lastIdx = -1;
@@ -132,19 +155,20 @@ void showDrawingCanvas(bool* p_open){
 	for(int i = 0; i < numPoints; i++){
 		ImVec2 p1 = ImVec2(origin.x + canvasPoints[i].x, origin.y + canvasPoints[i].y);
 		ImVec2 p2 = ImVec2(origin.x + canvasPoints[i+1].x, origin.y + canvasPoints[i+1].y);
+		ImU32 theColor = canvasPointColors[i];
 		
 		if(lastSegmentIndexes.find(i) != lastSegmentIndexes.end()){
 			//std::cout << "last point index: " << lastPointIndex << std::endl;				
 			// don't draw a line from this point to the next
-			draw_list->AddCircleFilled(p1, 4.0f, yellow, 10.0f);
+			draw_list->AddCircleFilled(p1, 4.0f, theColor, 8.0f);
 			continue;
 		}
 		if(i < numPoints - 1){
 			// connect the points
-			draw_list->AddLine(p1, p2, yellow, 8.0f);
+			draw_list->AddLine(p1, p2, theColor, 8.0f);
 		}else{
 			// just draw point
-			draw_list->AddCircle(p1, 4.0f, yellow, 10.0f);
+			draw_list->AddCircle(p1, 4.0f, theColor, 8.0f);
 		}
 	}
 	
@@ -156,9 +180,23 @@ void showDrawingCanvas(bool* p_open){
 	if(ImGui::Button("clear")){
 		canvasPoints.clear();
 		lastSegmentIndexes.clear();
+		canvasPointColors.clear();
 	}
 	
+	// show color wheel
+	ImGui::ColorPicker4("MyColor##4", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
+	
 	ImGui::End();
+}
+
+int correctRGB(int channel){
+	if(channel > 255){
+		return 255;
+	}
+	if(channel < 0){
+		return 0;
+	}
+	return channel;
 }
 
 void showImageEditor(bool* p_open){
@@ -166,9 +204,14 @@ void showImageEditor(bool* p_open){
 	
 	static bool showImage = false;
 	static GLuint texture = 0;
+	static GLuint originalImage = 1;
 	static int imageHeight = 0;
 	static int imageWidth = 0;
 	static char importImageFilepath[64] = "";
+	
+	// for filters that have customizable parameters,
+	// have a bool flag so we can toggle the params
+	static bool showSaturateParams = false;
 	
 	bool importImageClicked = ImGui::Button("import image");
 	ImGui::SameLine();
@@ -181,7 +224,7 @@ void showImageEditor(bool* p_open){
 		std::string filepath(importImageFilepath);
 		
 		if(trimString(filepath) != ""){
-			bool loaded = importImage(filepath.c_str(), &texture, &imageWidth, &imageHeight);
+			bool loaded = importImage(filepath.c_str(), &texture, &originalImage, &imageWidth, &imageHeight);
 			if(loaded){
 				showImage = true;
 			}else{
@@ -192,12 +235,16 @@ void showImageEditor(bool* p_open){
 	
 	if(showImage){
 		// TODO: get an open file dialog working?
+		// TODO: we need an offscreen texture as an intermediate when applying filters so we
+		// can continue to reuse original image data
+		
 		ImGui::Text("size = %d x %d", imageWidth, imageHeight);
 		ImGui::Image((void *)(intptr_t)texture, ImVec2(imageWidth, imageHeight));
 		//ImGui::Text("image imported");
 		
 		int pixelDataLen = imageWidth*imageHeight*4; // 4 because rgba
 		
+		// make sure we use the right texture (since we also have one for rendering an offscreen frame buffer scene on)
 		glActiveTexture(GL_TEXTURE0);
 		
 		if (ImGui::Button("grayscale")){	
@@ -232,6 +279,60 @@ void showImageEditor(bool* p_open){
 			delete pixelData;
 		}
 		ImGui::SameLine();
+		
+		if (ImGui::Button("saturate")){
+			showSaturateParams = !showSaturateParams;
+		}
+		
+		if(showSaturateParams){
+			static float lumG = 0.5f;
+			static float lumR = 0.5f;
+			static float lumB = 0.5f;
+			static float saturationVal = 0.5f;
+			
+			unsigned char* pixelData = new unsigned char[pixelDataLen];
+			
+			// use the original texture to get pixel data from
+			glActiveTexture(GL_TEXTURE2);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			
+			float r1 = ((1 - saturationVal) * lumR) + saturationVal;
+			float g1 = ((1 - saturationVal) * lumG) + saturationVal;
+			float b1 = ((1 - saturationVal) * lumB) + saturationVal;	
+			
+			float r2 = (1 - saturationVal) * lumR;
+			float g2 = (1 - saturationVal) * lumG;
+			float b2 = (1 - saturationVal) * lumB;	
+			
+			for(int i = 0; i <= pixelDataLen-4; i += 4){
+				int r = (int)pixelData[i];
+				int g = (int)pixelData[i+1];
+				int b = (int)pixelData[i+2];
+				
+				int newR = (int)(r*r1 + g*g2 + b*b2);
+				int newG = (int)(r*r2 + g*g1 + b*b2);
+				int newB = (int)(r*r2 + g*g2 + b*b1);
+				
+				// ensure value is within range of 0 and 255
+				newR = correctRGB(newR);
+				newG = correctRGB(newG);
+				newB = correctRGB(newB);
+				
+				pixelData[i] = (unsigned char)newR;
+				pixelData[i+1] = (unsigned char)newG;
+				pixelData[i+2] = (unsigned char)newB;
+			}
+			
+			// after editing pixel data, write it to the other texture
+			glActiveTexture(GL_TEXTURE0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			delete pixelData;
+			
+			ImGui::SliderFloat("saturation val", &saturationVal, 0.0f, 5.0f);
+			ImGui::SliderFloat("lumR", &lumR, 0.0f, 5.0f);
+			ImGui::SliderFloat("lumG", &lumG, 0.0f, 5.0f);
+			ImGui::SliderFloat("lumB", &lumB, 0.0f, 5.0f);
+		}
 	}
 	
 	ImGui::End();
@@ -304,15 +405,15 @@ const char* fragShaderSource = R"glsl(
 
 	void main()
 	{
-		float newR = cos(time*pos.x);
-		float newG = sin(time*pos.y);
-		float newB = cos(time*(pos.x+pos.y));
+		float newR = cos(time)/2; //cos(time*pos.x);
+		float newG = sin(time)/2; //sin(time*pos.y);
+		float newB = cos(time)/2; //cos(time*pos.y);
 		outColor = vec4(newR, newG, newB, 1.0);
 	}
 )glsl";
 
-GLuint shaderProgram;
-void setupShaders(){
+//GLuint shaderProgram;
+void setupShaders(GLuint& shaderProgram){
 	// compile vertex shader
 	GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
 	glShaderSource(vertexShader, 1, &vertexShaderSource, NULL);
@@ -401,7 +502,7 @@ void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
 	//glDrawBuffers(1, drawBuffers);
 }
 
-void show3dModelViewer(bool* p_open, GLuint offscreenFrameBuf, GLuint offscreenTexture, auto startTime){
+void show3dModelViewer(bool* p_open, GLuint offscreenFrameBuf, GLuint offscreenTexture, GLuint shaderProgram, auto startTime){
 	ImGui::Begin("3d model viewer");
 	
 	std::string filepath = "battleship.obj";
@@ -550,7 +651,9 @@ int main(int, char**)
 		std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
 	}
 	setupTriangle();
-	setupShaders();
+	
+	GLuint shaderProgram;
+	setupShaders(shaderProgram);
 	
 	// set up for rendering scene to frame buffer -> texture -> use texture as image to render in the GUI
 	GLuint offscreenFrameBuf;
@@ -603,7 +706,7 @@ int main(int, char**)
 			showImageEditor(&showImageEditorFlag);
 		
 		if(show3dModelViewerFlag){
-			show3dModelViewer(&show3dModelViewerFlag, offscreenFrameBuf, offscreenTexture, startTime);
+			show3dModelViewer(&show3dModelViewerFlag, offscreenFrameBuf, offscreenTexture, shaderProgram, startTime);
 		}
 		
 		/*
