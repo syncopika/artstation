@@ -13,11 +13,13 @@
 #include <vector>
 #include <set>
 #include <stdio.h>
+#include <math.h>
 #include <SDL.h>
 #include <GL/glew.h>
 #include <GLM/vec2.hpp>
 #include <GLM/vec3.hpp>
 #include <GLM/mat4x4.hpp>
+#include <GLM/ext.hpp>
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
@@ -576,6 +578,9 @@ void show3dModelViewer(
 	GLuint matrixId,
 	auto startTime
 	){
+	
+	static bool toggleWireframe = false;
+	
 	ImGui::Begin("3d model viewer");
 	
 	std::string filepath = "battleship.obj";
@@ -620,16 +625,29 @@ void show3dModelViewer(
 			glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
-			// vbo
-			//glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			//glBufferData(GL_ARRAY_BUFFER, sizeof(verts)*sizeof(glm::vec3), &verts[0], GL_STATIC_DRAW);
+			if(toggleWireframe){
+				glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+			}else{
+				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+			}
 			
-			//
 			//glEnable(GL_DEPTH_TEST);
 			//glDepthFunc(GL_LESS); 
 			//glEnable(GL_CULL_FACE);
 			
+			// vbo
+			//glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			//glBufferData(GL_ARRAY_BUFFER, sizeof(verts)*sizeof(glm::vec3), &verts[0], GL_STATIC_DRAW);
+			
+			// for shaders
+			auto now = std::chrono::high_resolution_clock::now();
+			float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
+			GLuint t = glGetUniformLocation(shaderProgram, "time");
+			glUniform1f(t, time);
+			
 			glm::mat4 mvp = glm::mat4(1.0); // just leave as identity matrix for now
+			mvp = glm::scale(mvp, glm::vec3(0.5, 0.5, 0.5));
+			mvp = glm::rotate(mvp, cos(time), glm::vec3(0,1,0));
 			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
 			
 			// set up attributes to vertex buffer
@@ -641,13 +659,7 @@ void show3dModelViewer(
 			glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
 			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0); */
 			
-			// for shaders
-			auto now = std::chrono::high_resolution_clock::now();
-			float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
-			GLuint t = glGetUniformLocation(shaderProgram, "time");
-			glUniform1f(t, time);
-			
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+			glDrawArrays(GL_TRIANGLES, 0, 36);
 			
 			//glDisableVertexAttribArray(0);
 			//glDisableVertexAttribArray(1);
@@ -664,6 +676,9 @@ void show3dModelViewer(
 			
 			// unbind offscreenFrameBuf and use default framebuffer again (show the gui window) - I think that's how this works?
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		}
+		if(ImGui::Button("toggle wireframe")){
+			toggleWireframe = !toggleWireframe; 
 		}
 	}
 	
@@ -766,8 +781,8 @@ int main(int, char**)
 	GLuint uvBuffer;
 	glGenBuffers(1, &uvBuffer);
 	
-	//setupCube(vbo);
-	setupTriangle(vbo);
+	setupCube(vbo);
+	//setupTriangle(vbo);
 	
 	GLuint shaderProgram;
 	setupShaders(shaderProgram);

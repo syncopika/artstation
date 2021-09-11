@@ -7,7 +7,7 @@ there's not much to see at the moment though.
 ## dependencies:    
 - [Dear ImGUI](https://github.com/ocornut/imgui)    
 - [SDL2](https://www.libsdl.org/download-2.0.php) (the development library)    
-- OpenGL 3 (came with MinGW v6.3.0)    
+- OpenGL 3 (came with MinGW v6.3.0 in `MinGW/include/GL`)    
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)   
 - [tiny_object_loader.h](https://github.com/tinyobjloader/tinyobjloader)
 - [GLEW](http://glew.sourceforge.net/install.html)   
