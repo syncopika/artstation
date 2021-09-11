@@ -17,5 +17,5 @@ If using Windows, you just need MinGW (should include the core OpenGL dependency
     
 For the GLEW dependency, I downloaded the precompiled binaries and followed the "Using GLEW as a shared library" route noted [here](http://glew.sourceforge.net/install.html). If using MinGW (I'm still using `v6.3.0` btw), you should put `glew32.lib` in `MinGW/lib`.
 	
-Once in this directory, update `Makefile` so that the directory paths for SDL2 and OpenGL match the paths on your computer. Then run `make`.    
+Once in this directory, update `Makefile` so that the directory paths for SDL2 and GLEW match the paths for their location on your computer. Then run `make`.    
     

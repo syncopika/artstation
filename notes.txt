@@ -2,6 +2,7 @@ makefile stuff ==============================================
 https://stackoverflow.com/questions/53965259/makefile-that-covers-interfaces-h-files
 https://stackoverflow.com/questions/41205042/c-makefile-headers-and-cpp
 https://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
+https://stackoverflow.com/questions/519342/what-is-the-difference-between-i-and-l-in-makefile
 
 imgui stuff =================================================
 https://github.com/ocornut/imgui/blob/master/examples/example_sdl_opengl3/main.cpp
@@ -24,6 +25,8 @@ https://github.com/ocornut/imgui/issues/90 -> learned about glActiveTexture here
 https://stackoverflow.com/questions/39093499/qt-opengl-gldrawelements-and-gldrawarray-show-only-blank-screen 
   -> set up vbo and vao first, then shaders (but also if I had followed the open.gl tutorial more carefully I should've noticed this -_-) 
 https://learnopengl.com/Getting-started/Shaders
+https://stackoverflow.com/questions/18210396/opengl-how-to-unbind-and-delete-buffers-properly
+https://community.khronos.org/t/do-i-need-to-bind-and-unbind-my-vertex-buffer-every-draw-call/104150
 
 
 TODO:

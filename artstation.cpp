@@ -15,6 +15,9 @@
 #include <stdio.h>
 #include <SDL.h>
 #include <GL/glew.h>
+#include <GLM/vec2.hpp>
+#include <GLM/vec3.hpp>
+#include <GLM/mat4x4.hpp>
 
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <SDL_opengles2.h>
@@ -235,9 +238,6 @@ void showImageEditor(bool* p_open){
 	
 	if(showImage){
 		// TODO: get an open file dialog working?
-		// TODO: we need an offscreen texture as an intermediate when applying filters so we
-		// can continue to reuse original image data
-		
 		ImGui::Text("size = %d x %d", imageWidth, imageHeight);
 		ImGui::Image((void *)(intptr_t)texture, ImVec2(imageWidth, imageHeight));
 		//ImGui::Text("image imported");
@@ -298,11 +298,11 @@ void showImageEditor(bool* p_open){
 			
 			float r1 = ((1 - saturationVal) * lumR) + saturationVal;
 			float g1 = ((1 - saturationVal) * lumG) + saturationVal;
-			float b1 = ((1 - saturationVal) * lumB) + saturationVal;	
+			float b1 = ((1 - saturationVal) * lumB) + saturationVal;
 			
 			float r2 = (1 - saturationVal) * lumR;
 			float g2 = (1 - saturationVal) * lumG;
-			float b2 = (1 - saturationVal) * lumB;	
+			float b2 = (1 - saturationVal) * lumB;
 			
 			for(int i = 0; i <= pixelDataLen-4; i += 4){
 				int r = (int)pixelData[i];
@@ -339,7 +339,13 @@ void showImageEditor(bool* p_open){
 }
 
 // https://github.com/tinyobjloader/tinyobjloader
-void getObjModelInfo(auto& shapes, auto& attrib){
+void getObjModelInfo(
+	auto& shapes, 
+	auto& attrib, 
+	std::vector<glm::vec3>& vertices,
+	std::vector<glm::vec2>& uvs,
+	std::vector<glm::vec3>& normals
+	){
 	for (size_t s = 0; s < shapes.size(); s++) {
 	  // Loop over faces(polygon)
 	  size_t index_offset = 0;
@@ -350,21 +356,24 @@ void getObjModelInfo(auto& shapes, auto& attrib){
 		for (size_t v = 0; v < fv; v++) {
 		  // access to vertex
 		  tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
-		  tinyobj::real_t vx = attrib.vertices[3*size_t(idx.vertex_index)+0];
-		  tinyobj::real_t vy = attrib.vertices[3*size_t(idx.vertex_index)+1];
-		  tinyobj::real_t vz = attrib.vertices[3*size_t(idx.vertex_index)+2];
+		  float vx = (float)attrib.vertices[3*size_t(idx.vertex_index)+0];
+		  float vy = (float)attrib.vertices[3*size_t(idx.vertex_index)+1];
+		  float vz = (float)attrib.vertices[3*size_t(idx.vertex_index)+2];
+		  vertices.push_back(glm::vec3(vx, vy, vz));
 
 		  // Check if `normal_index` is zero or positive. negative = no normal data
 		  if (idx.normal_index >= 0) {
-			tinyobj::real_t nx = attrib.normals[3*size_t(idx.normal_index)+0];
-			tinyobj::real_t ny = attrib.normals[3*size_t(idx.normal_index)+1];
-			tinyobj::real_t nz = attrib.normals[3*size_t(idx.normal_index)+2];
+			float nx = (float)attrib.normals[3*size_t(idx.normal_index)+0];
+			float ny = (float)attrib.normals[3*size_t(idx.normal_index)+1];
+			float nz = (float)attrib.normals[3*size_t(idx.normal_index)+2];
+			normals.push_back(glm::vec3(nx, ny, nz));
 		  }
 
 		  // Check if `texcoord_index` is zero or positive. negative = no texcoord data
 		  if (idx.texcoord_index >= 0) {
-			tinyobj::real_t tx = attrib.texcoords[2*size_t(idx.texcoord_index)+0];
-			tinyobj::real_t ty = attrib.texcoords[2*size_t(idx.texcoord_index)+1];
+			float tx = (float)attrib.texcoords[2*size_t(idx.texcoord_index)+0];
+			float ty = (float)attrib.texcoords[2*size_t(idx.texcoord_index)+1];
+			uvs.push_back(glm::vec2(tx, ty));
 		  }
 
 		  // Optional: vertex colors
@@ -383,24 +392,30 @@ void getObjModelInfo(auto& shapes, auto& attrib){
 // 3d stuff - TODO: move elsewhere
 // shaders
 const char* vertexShaderSource = R"glsl(
-	#version 150 core
+	#version 330 core
 
-	in vec2 position;
-	out vec2 pos;
+	layout(location = 0) in vec3 position;
+	layout(location = 1) in vec2 vertexUV;
+	
+	out vec2 uv;
+	out vec3 pos;
+	
+	uniform mat4 mvp;
 
 	void main()
 	{
 		pos = position;
-		gl_Position = vec4(position, 0.0, 1.0);
+		uv = vertexUV;
+		gl_Position = mvp * vec4(position, 1.0);
 	}
 )glsl";
 
 const char* fragShaderSource = R"glsl(
-	#version 150 core
+	#version 330 core
 
 	uniform float time;
 
-	in vec2 pos;
+	in vec3 pos;
 	out vec4 outColor;
 
 	void main()
@@ -447,20 +462,69 @@ void setupShaders(GLuint& shaderProgram){
 	
 	// set up position attribute in vertex shader
 	GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-	glVertexAttribPointer(posAttrib, 2, GL_FLOAT, GL_FALSE, 0, 0);
+	glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
 	glEnableVertexAttribArray(posAttrib);
 }
 
-void setupTriangle(){
+void setupCube(GLuint& vbo){
 	float vertices[] = {
-		0.0f, 0.5f,
-		0.5f, 0.0f,
-		-0.5f, 0.0f
+		-1.0f,-1.0f,-1.0f, // triangle 1 : begin
+		-1.0f,-1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f, // triangle 1 : end
+		1.0f, 1.0f,-1.0f, // triangle 2 : begin
+		-1.0f,-1.0f,-1.0f,
+		-1.0f, 1.0f,-1.0f, // triangle 2 : end
+		1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f,-1.0f,
+		1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f,-1.0f,
+		1.0f,-1.0f,-1.0f,
+		-1.0f,-1.0f,-1.0f,
+		-1.0f,-1.0f,-1.0f,
+		-1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f,-1.0f,
+		1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f, 1.0f,
+		-1.0f,-1.0f,-1.0f,
+		-1.0f, 1.0f, 1.0f,
+		-1.0f,-1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f,-1.0f,
+		1.0f,-1.0f,-1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f,-1.0f,
+		-1.0f, 1.0f,-1.0f,
+		1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f,-1.0f,
+		-1.0f, 1.0f, 1.0f,
+		1.0f, 1.0f, 1.0f,
+		-1.0f, 1.0f, 1.0f,
+		1.0f,-1.0f, 1.0f
 	};
 	
 	// vertex buffer object
-	GLuint vbo;
-	glGenBuffers(1, &vbo);
+	glBindBuffer(GL_ARRAY_BUFFER, vbo);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+	
+	// vertex array object
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+}
+
+
+void setupTriangle(GLuint& vbo){
+	float vertices[] = {
+		0.0f, 0.5f, 0.0f,
+		0.5f, 0.0f, 0.0f,
+		-0.5f, 0.0f, 0.0f
+	};
+	
+	// vertex buffer object
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 	
@@ -474,7 +538,7 @@ void setupTriangle(){
 // TODO: pass in dimensions later?
 void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
 	// render scene to frame buffer -> texture -> use texture as image to render in the GUI
-	// create frame buffer
+	// create and bind frame buffer
 	glGenFramebuffers(1, frameBuffer);
 	glBindFramebuffer(GL_FRAMEBUFFER, *frameBuffer);
 	
@@ -502,7 +566,16 @@ void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
 	//glDrawBuffers(1, drawBuffers);
 }
 
-void show3dModelViewer(bool* p_open, GLuint offscreenFrameBuf, GLuint offscreenTexture, GLuint shaderProgram, auto startTime){
+void show3dModelViewer(
+	bool* p_open, 
+	GLuint offscreenFrameBuf, 
+	GLuint offscreenTexture, 
+	GLuint shaderProgram,
+	GLuint vbo,
+	GLuint uvBuffer,
+	GLuint matrixId,
+	auto startTime
+	){
 	ImGui::Begin("3d model viewer");
 	
 	std::string filepath = "battleship.obj";
@@ -524,9 +597,18 @@ void show3dModelViewer(bool* p_open, GLuint offscreenFrameBuf, GLuint offscreenT
 		auto& attrib = reader.GetAttrib();
 		auto& shapes = reader.GetShapes();
 		//auto& materials = reader.GetMaterials();
+		std::vector<glm::vec3> verts;
+		std::vector<glm::vec2> uvs;
+		std::vector<glm::vec3> normals;
 		
 		ImGui::Text("model has %d shapes", shapes.size());
 		ImGui::Text("model has %d vertices", attrib.vertices.size());
+		
+		getObjModelInfo(shapes, attrib, verts, uvs, normals);
+		
+		// uvs
+		//glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+		//glBufferData(GL_ARRAY_BUFFER, sizeof(uvs)*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 		
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
@@ -535,6 +617,29 @@ void show3dModelViewer(bool* p_open, GLuint offscreenFrameBuf, GLuint offscreenT
 			// adjust the glviewport to be drawn to so the image comes out correctly
 			glBindFramebuffer(GL_FRAMEBUFFER, offscreenFrameBuf);
 			glViewport(0, 0, 500, 500);
+			glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			
+			// vbo
+			//glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			//glBufferData(GL_ARRAY_BUFFER, sizeof(verts)*sizeof(glm::vec3), &verts[0], GL_STATIC_DRAW);
+			
+			//
+			//glEnable(GL_DEPTH_TEST);
+			//glDepthFunc(GL_LESS); 
+			//glEnable(GL_CULL_FACE);
+			
+			glm::mat4 mvp = glm::mat4(1.0); // just leave as identity matrix for now
+			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
+			
+			// set up attributes to vertex buffer
+			//glEnableVertexAttribArray(0);
+			//glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+			
+/* 			glEnableVertexAttribArray(1);
+			glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0); */
 			
 			// for shaders
 			auto now = std::chrono::high_resolution_clock::now();
@@ -543,6 +648,9 @@ void show3dModelViewer(bool* p_open, GLuint offscreenFrameBuf, GLuint offscreenT
 			glUniform1f(t, time);
 			
 			glDrawArrays(GL_TRIANGLES, 0, 3);
+			
+			//glDisableVertexAttribArray(0);
+			//glDisableVertexAttribArray(1);
 			
 			// grab the offscreen texture and draw it to an imgui image
 			glActiveTexture(GL_TEXTURE1);
@@ -554,7 +662,7 @@ void show3dModelViewer(bool* p_open, GLuint offscreenFrameBuf, GLuint offscreenT
 			ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(w, h));
 			delete pixelData;
 			
-			// use default framebuffer again (show the gui window)
+			// unbind offscreenFrameBuf and use default framebuffer again (show the gui window) - I think that's how this works?
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 	}
@@ -650,10 +758,23 @@ int main(int, char**)
 	if(GLEW_OK != err){
 		std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
 	}
-	setupTriangle();
+	
+	// set up buffers for 3d objects
+	GLuint vbo;
+	glGenBuffers(1, &vbo);
+	
+	GLuint uvBuffer;
+	glGenBuffers(1, &uvBuffer);
+	
+	//setupCube(vbo);
+	setupTriangle(vbo);
 	
 	GLuint shaderProgram;
 	setupShaders(shaderProgram);
+	
+	// set up uniform attribute for passing in a matrix
+	// this will allow us to transform the object
+	GLuint matrixId = glGetUniformLocation(shaderProgram, "mvp");
 	
 	// set up for rendering scene to frame buffer -> texture -> use texture as image to render in the GUI
 	GLuint offscreenFrameBuf;
@@ -706,7 +827,16 @@ int main(int, char**)
 			showImageEditor(&showImageEditorFlag);
 		
 		if(show3dModelViewerFlag){
-			show3dModelViewer(&show3dModelViewerFlag, offscreenFrameBuf, offscreenTexture, shaderProgram, startTime);
+			show3dModelViewer(
+				&show3dModelViewerFlag,
+				offscreenFrameBuf,
+				offscreenTexture,
+				shaderProgram,
+				vbo,
+				uvBuffer,
+				matrixId,
+				startTime
+			);
 		}
 		
 		/*

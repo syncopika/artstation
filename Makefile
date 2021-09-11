@@ -9,9 +9,12 @@ SDL_LIB = C:\libraries\SDL2-2.0.10\i686-w64-mingw32\lib -lSDL2main -lSDL2
 # -IC:\SDL2\include\SDL2
 SDL_INCLUDE = C:\libraries\SDL2-2.0.10\i686-w64-mingw32\include\SDL2
 
-# opengl (if you don't want to do 3d stuff, just using MinGW\include\GL should be fine. otherwise, we use GLEW)
+# point to opengl location (if you don't want to do 3d stuff, just using MinGW\include\GL should be fine and this line won't be necessary. otherwise, we use GLEW, which includes OpenGL)
 #C:\MinGW\include\GL
 OPENGL_INCLUDE = C:\libraries\glew-2.1.0\include
+
+# point to the location of the GLM library
+GLM_INCLUDE = C:\libraries\glm
 
 # other dependencies (like stb_image.h, tiny_obj_loader.h)
 OTHER_DEPS = stb_image.h tiny_obj_loader.h
@@ -37,7 +40,7 @@ EXE = artstation
 
 # build main
 %.o:%.cpp $(OTHER_DEPS)
-	$(CXX) $(CXXFLAGS) -I$(OPENGL_INCLUDE) -c -o $@ $<
+	$(CXX) $(CXXFLAGS) -I$(OPENGL_INCLUDE) -I$(GLM_INCLUDE) -c -o $@ $<
 
 # build imgui dependencies
 %.o:$(IMGUI_DIR)/%.cpp
