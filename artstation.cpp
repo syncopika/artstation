@@ -568,6 +568,11 @@ void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
 	//glDrawBuffers(1, drawBuffers);
 }
 
+float angleToRads(float angleInDeg){
+	float pi = 3.14159;
+	return (pi / 180) * angleInDeg;
+}
+
 void show3dModelViewer(
 	bool* p_open, 
 	GLuint offscreenFrameBuf, 
@@ -647,8 +652,10 @@ void show3dModelViewer(
 			
 			glm::mat4 mvp = glm::mat4(1.0); // just leave as identity matrix for now
 			mvp = glm::scale(mvp, glm::vec3(0.5, 0.5, 0.5));
-			mvp = glm::rotate(mvp, cos(time), glm::vec3(0,1,0));
-			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
+			
+			static glm::mat4 lastMvp = mvp;
+			lastMvp = glm::rotate(lastMvp, angleToRads(0.5), glm::vec3(0,1,0)); // rotate based on last rotation
+			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &lastMvp[0][0]);
 			
 			// set up attributes to vertex buffer
 			//glEnableVertexAttribArray(0);
