@@ -27,7 +27,7 @@ https://stackoverflow.com/questions/39093499/qt-opengl-gldrawelements-and-gldraw
 https://learnopengl.com/Getting-started/Shaders
 https://stackoverflow.com/questions/18210396/opengl-how-to-unbind-and-delete-buffers-properly
 https://community.khronos.org/t/do-i-need-to-bind-and-unbind-my-vertex-buffer-every-draw-call/104150
-
+https://stackoverflow.com/questions/3498581/in-opengl-what-is-the-simplest-way-to-create-a-perspective-view-using-only-open
 
 TODO:
 - move 3d stuff to a separate file?

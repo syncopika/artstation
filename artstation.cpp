@@ -468,7 +468,7 @@ void setupShaders(GLuint& shaderProgram){
 	glEnableVertexAttribArray(posAttrib);
 }
 
-void setupCube(GLuint& vbo){
+void setupCube(GLuint& vbo, GLuint& vao){
 	float vertices[] = {
 		-1.0f,-1.0f,-1.0f, // triangle 1 : begin
 		-1.0f,-1.0f, 1.0f,
@@ -511,15 +511,11 @@ void setupCube(GLuint& vbo){
 	// vertex buffer object
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	
-	// vertex array object
-	GLuint vao;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind
 }
 
 
-void setupTriangle(GLuint& vbo){
+void setupTriangle(GLuint& vbo, GLuint& vao){
 	float vertices[] = {
 		0.0f, 0.5f, 0.0f,
 		0.5f, 0.0f, 0.0f,
@@ -529,11 +525,7 @@ void setupTriangle(GLuint& vbo){
 	// vertex buffer object
 	glBindBuffer(GL_ARRAY_BUFFER, vbo);
 	glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-	
-	// vertex array object
-	GLuint vao;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
+	glBindBuffer(GL_ARRAY_BUFFER, 0); // unbind
 }
 
 // return the GLuint of the texture used for offscreen rendering
@@ -573,12 +565,28 @@ float angleToRads(float angleInDeg){
 	return (pi / 180) * angleInDeg;
 }
 
+glm::mat4 createPerspectiveMatrix(float fovAngle, float aspect, float near, float far){
+	glm::mat4 m(0.0);
+	
+	float fovRadians = angleToRads(fovAngle);
+	float f = 1.0f / tan(fovRadians/2.0f);
+	
+	m[0][0] = f / aspect;
+	m[1][1] = f;
+	m[2][2] = (far + near)/(near - far);
+	m[2][3] = -1.0f;
+	m[3][2] = (2.0f * far * near) / (near - far);
+
+	return m;
+}
+
 void show3dModelViewer(
 	bool* p_open, 
 	GLuint offscreenFrameBuf, 
 	GLuint offscreenTexture, 
 	GLuint shaderProgram,
 	GLuint vbo,
+	GLuint vao,
 	GLuint uvBuffer,
 	GLuint matrixId,
 	auto startTime
@@ -627,7 +635,7 @@ void show3dModelViewer(
 			// adjust the glviewport to be drawn to so the image comes out correctly
 			glBindFramebuffer(GL_FRAMEBUFFER, offscreenFrameBuf);
 			glViewport(0, 0, 500, 500);
-			glClearColor(0.0f, 0.0f, 0.4f, 0.0f);
+			glClearColor(0.62f, 0.73f, 0.78f, 0.0f);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
 			if(toggleWireframe){
@@ -636,13 +644,13 @@ void show3dModelViewer(
 				glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			}
 			
-			//glEnable(GL_DEPTH_TEST);
-			//glDepthFunc(GL_LESS); 
-			//glEnable(GL_CULL_FACE);
+			glEnable(GL_DEPTH_TEST);
+			glDepthFunc(GL_LESS);
+			glEnable(GL_CULL_FACE);
 			
-			// vbo
-			//glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			//glBufferData(GL_ARRAY_BUFFER, sizeof(verts)*sizeof(glm::vec3), &verts[0], GL_STATIC_DRAW);
+			// load the vertices for the model
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glBufferData(GL_ARRAY_BUFFER, verts.size()*sizeof(glm::vec3), &verts[0], GL_STATIC_DRAW);
 			
 			// for shaders
 			auto now = std::chrono::high_resolution_clock::now();
@@ -650,25 +658,42 @@ void show3dModelViewer(
 			GLuint t = glGetUniformLocation(shaderProgram, "time");
 			glUniform1f(t, time);
 			
-			glm::mat4 mvp = glm::mat4(1.0); // just leave as identity matrix for now
-			mvp = glm::scale(mvp, glm::vec3(0.5, 0.5, 0.5));
+			// set up project matrix
+			float fovAngle = 60.0f;
+			float aspect = 0.8f;
+			float near = 0.01f;
+			float far = 100.0f;
+			glm::mat4 perspectiveMat = createPerspectiveMatrix(fovAngle, aspect, near, far);
+			
+			// set up modelview matrix (and do all the necessary transformations)
+			glm::mat4 mvp = glm::mat4(1.0);
+			
+			// the following should do: move model to origin, rotate about x, scale it, then move it further away from the camera along z
+			mvp = glm::translate(mvp, glm::vec3(0, 0, -15.0f)); // move model back a bit
+			mvp = glm::scale(mvp, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
+			mvp = glm::rotate(mvp, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
+			mvp = glm::translate(mvp, glm::vec3(0, 0, 0)); // place at center (0,0,0)
 			
 			static glm::mat4 lastMvp = mvp;
-			lastMvp = glm::rotate(lastMvp, angleToRads(0.5), glm::vec3(0,1,0)); // rotate based on last rotation
-			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &lastMvp[0][0]);
+			lastMvp = glm::rotate(lastMvp, angleToRads(0.5f), glm::vec3(0,1,0)); // rotate based on last rotation
+			
+			// multiply perspectiveMat and modelview 
+			perspectiveMat = perspectiveMat * lastMvp;
+			
+			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &perspectiveMat[0][0]);
 			
 			// set up attributes to vertex buffer
-			//glEnableVertexAttribArray(0);
-			//glBindBuffer(GL_ARRAY_BUFFER, vbo);
-			//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+			glEnableVertexAttribArray(0);
+			glBindBuffer(GL_ARRAY_BUFFER, vbo);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 			
-/* 			glEnableVertexAttribArray(1);
-			glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-			glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0); */
+ 			//glEnableVertexAttribArray(1);
+			//glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+			//glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
 			
-			glDrawArrays(GL_TRIANGLES, 0, 36);
+			glDrawArrays(GL_TRIANGLES, 0, verts.size());
 			
-			//glDisableVertexAttribArray(0);
+			glDisableVertexAttribArray(0);
 			//glDisableVertexAttribArray(1);
 			
 			// grab the offscreen texture and draw it to an imgui image
@@ -684,6 +709,7 @@ void show3dModelViewer(
 			// unbind offscreenFrameBuf and use default framebuffer again (show the gui window) - I think that's how this works?
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
+		
 		if(ImGui::Button("toggle wireframe")){
 			toggleWireframe = !toggleWireframe; 
 		}
@@ -785,11 +811,15 @@ int main(int, char**)
 	GLuint vbo;
 	glGenBuffers(1, &vbo);
 	
+	GLuint vao;
+	glGenVertexArrays(1, &vao);
+	glBindVertexArray(vao);
+	
 	GLuint uvBuffer;
 	glGenBuffers(1, &uvBuffer);
 	
-	setupCube(vbo);
-	//setupTriangle(vbo);
+	setupCube(vbo, vao);
+	//setupTriangle(vbo, vao);
 	
 	GLuint shaderProgram;
 	setupShaders(shaderProgram);
@@ -855,6 +885,7 @@ int main(int, char**)
 				offscreenTexture,
 				shaderProgram,
 				vbo,
+				vao,
 				uvBuffer,
 				matrixId,
 				startTime
