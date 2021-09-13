@@ -612,6 +612,11 @@ void show3dModelViewer(
 			ImGui::Text("TinyObjReader: %s", (reader.Warning()).c_str());
 		}
 		
+		// set up some static variables to let user control camera
+		static float cameraCurrX = 0.0f;
+		static float cameraCurrY = 0.0f;
+		static float cameraCurrZ = -15.0f;
+		
 		auto& attrib = reader.GetAttrib();
 		auto& shapes = reader.GetShapes();
 		//auto& materials = reader.GetMaterials();
@@ -660,25 +665,27 @@ void show3dModelViewer(
 			
 			// set up project matrix
 			float fovAngle = 60.0f;
-			float aspect = 0.8f;
+			float aspect = 1.0f; // 500 x 500 screen
 			float near = 0.01f;
 			float far = 100.0f;
 			glm::mat4 perspectiveMat = createPerspectiveMatrix(fovAngle, aspect, near, far);
 			
 			// set up modelview matrix (and do all the necessary transformations)
-			glm::mat4 mvp = glm::mat4(1.0);
+			// store y rotation and rotate based on last y rotation so the model will rotate 360
+			static glm::mat4 lastYRot = glm::mat4(1.0);
+			lastYRot = glm::rotate(lastYRot, angleToRads(0.5f), glm::vec3(0,1,0));
 			
-			// the following should do: move model to origin, rotate about x, scale it, then move it further away from the camera along z
-			mvp = glm::translate(mvp, glm::vec3(0, 0, -15.0f)); // move model back a bit
-			mvp = glm::scale(mvp, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
+			// the following should do: move model to origin, scale it, rotate about x, rotate about y, then move it to final position (i.e. further away from the camera along z)
+			// these operations here are ones we want to keep constant through each render, so we do them on the identity matrix (not using the previous object's transformation matrix)
+			glm::mat4 mvp = glm::mat4(1.0);
+			mvp = glm::translate(mvp, glm::vec3(cameraCurrX, cameraCurrY, cameraCurrZ));
+			mvp = mvp * lastYRot; // rotate about Y based on last rotation
 			mvp = glm::rotate(mvp, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
+			mvp = glm::scale(mvp, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
 			mvp = glm::translate(mvp, glm::vec3(0, 0, 0)); // place at center (0,0,0)
 			
-			static glm::mat4 lastMvp = mvp;
-			lastMvp = glm::rotate(lastMvp, angleToRads(0.5f), glm::vec3(0,1,0)); // rotate based on last rotation
-			
-			// multiply perspectiveMat and modelview 
-			perspectiveMat = perspectiveMat * lastMvp;
+			// multiply perspectiveMat and modelview to get the final view
+			perspectiveMat = perspectiveMat * mvp;
 			
 			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &perspectiveMat[0][0]);
 			
@@ -713,6 +720,45 @@ void show3dModelViewer(
 		if(ImGui::Button("toggle wireframe")){
 			toggleWireframe = !toggleWireframe; 
 		}
+		
+		// control camera x movement
+		ImGui::Text("move along X: ");
+		ImGui::SameLine();
+		if(ImGui::Button("+x")){
+			cameraCurrX++;
+		}
+		ImGui::SameLine();
+		if(ImGui::Button("-x")){
+			cameraCurrX--;
+		}
+		ImGui::SameLine();
+		ImGui::Text("%f", cameraCurrX);
+		
+		// control camera y movement
+		ImGui::Text("move along Y: ");
+		ImGui::SameLine();
+		if(ImGui::Button("+y")){
+			cameraCurrY++;
+		}
+		ImGui::SameLine();
+		if(ImGui::Button("-y")){
+			cameraCurrY--;
+		}
+		ImGui::SameLine();
+		ImGui::Text("%f", cameraCurrY);
+		
+		// control camera z movement
+		ImGui::Text("move along Z: ");
+		ImGui::SameLine();
+		if(ImGui::Button("+z")){
+			cameraCurrZ++;
+		}
+		ImGui::SameLine();
+		if(ImGui::Button("-z")){
+			cameraCurrZ--;
+		}
+		ImGui::SameLine();
+		ImGui::Text("%f", cameraCurrZ);
 	}
 	
 	ImGui::End();
