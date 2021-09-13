@@ -89,7 +89,10 @@ std::string trimString(std::string str){
 void showDrawingCanvas(bool* p_open){
 	// set up canvas for drawing on
 	// TODO: be able to clear canvas (need to empty canvasPoints and lastSegmentIndexes)
-	ImGui::Begin("drawing canvas");
+	if(!ImGui::Begin("drawing canvas", p_open)){
+		ImGui::End();
+		return;
+	}
 	
 	// color wheel stuff
 	static ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // note this isn't assignment but just initialization
@@ -205,7 +208,11 @@ int correctRGB(int channel){
 }
 
 void showImageEditor(bool* p_open){
-	ImGui::Begin("image editor");
+	
+	if(!ImGui::Begin("image editor", p_open)){
+		ImGui::End();
+		return;
+	}
 	
 	static bool showImage = false;
 	static GLuint texture = 0;
@@ -591,10 +598,13 @@ void show3dModelViewer(
 	GLuint matrixId,
 	auto startTime
 	){
+		
+	if(!ImGui::Begin("3d model viewer", p_open)){
+		ImGui::End();
+		return;
+	}	
 	
 	static bool toggleWireframe = false;
-	
-	ImGui::Begin("3d model viewer");
 	
 	std::string filepath = "battleship.obj";
 	tinyobj::ObjReaderConfig config;
@@ -725,11 +735,11 @@ void show3dModelViewer(
 		ImGui::Text("move along X: ");
 		ImGui::SameLine();
 		if(ImGui::Button("+x")){
-			cameraCurrX++;
+			cameraCurrX += 0.5f;
 		}
 		ImGui::SameLine();
 		if(ImGui::Button("-x")){
-			cameraCurrX--;
+			cameraCurrX -= 0.5f;
 		}
 		ImGui::SameLine();
 		ImGui::Text("%f", cameraCurrX);
@@ -738,11 +748,11 @@ void show3dModelViewer(
 		ImGui::Text("move along Y: ");
 		ImGui::SameLine();
 		if(ImGui::Button("+y")){
-			cameraCurrY++;
+			cameraCurrY += 0.5f;
 		}
 		ImGui::SameLine();
 		if(ImGui::Button("-y")){
-			cameraCurrY--;
+			cameraCurrY -= 0.5f;
 		}
 		ImGui::SameLine();
 		ImGui::Text("%f", cameraCurrY);
@@ -751,11 +761,11 @@ void show3dModelViewer(
 		ImGui::Text("move along Z: ");
 		ImGui::SameLine();
 		if(ImGui::Button("+z")){
-			cameraCurrZ++;
+			cameraCurrZ += 0.5f;
 		}
 		ImGui::SameLine();
 		if(ImGui::Button("-z")){
-			cameraCurrZ--;
+			cameraCurrZ -= 0.5f;
 		}
 		ImGui::SameLine();
 		ImGui::Text("%f", cameraCurrZ);
@@ -841,10 +851,10 @@ int main(int, char**)
     //IM_ASSERT(font != NULL);
 
     // Our state
-    bool show_demo_window = true;
-	static bool showCanvasForDrawingFlag = true;
-	static bool showImageEditorFlag = true;
-	static bool show3dModelViewerFlag = true;
+    //bool show_demo_window = true;
+	bool showCanvasForDrawingFlag = true;
+	bool showImageEditorFlag = true;
+	bool show3dModelViewerFlag = true;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	
 	// set up GLEW
@@ -905,10 +915,20 @@ int main(int, char**)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
+		
+		if(ImGui::BeginMainMenuBar()){
+			if(ImGui::BeginMenu("Apps")){
+				ImGui::MenuItem("drawing canvas", NULL, &showCanvasForDrawingFlag);
+				ImGui::MenuItem("image editor", NULL, &showImageEditorFlag);
+				ImGui::MenuItem("3d model viewer", NULL, &show3dModelViewerFlag);
+				ImGui::EndMenu();
+			}
+			ImGui::EndMainMenuBar();
+		}
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-        if (show_demo_window)
-            ImGui::ShowDemoWindow(&show_demo_window);
+        //if (show_demo_window)
+        //    ImGui::ShowDemoWindow(&show_demo_window);
 		
 		// game presentation window
 		// ideas: 
@@ -937,19 +957,6 @@ int main(int, char**)
 				startTime
 			);
 		}
-		
-		/*
- 		if (ImGui::BeginMenuBar())
-		{
-			if (ImGui::BeginMenu("apps"))
-			{
-				ImGui::MenuItem("drawing canvas", NULL, &showCanvasForDrawing);
-				ImGui::MenuItem("image editor", NULL, &showImageEditor);
-				ImGui::EndMenu();
-			}
-			ImGui::EndMenuBar();
-		} 
-		*/
 
         // Rendering
         ImGui::Render();
@@ -964,6 +971,8 @@ int main(int, char**)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
+	
+	// TODO: delete opengl resources? e.g. buffers?
 
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);

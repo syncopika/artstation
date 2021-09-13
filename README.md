@@ -2,8 +2,15 @@
 just trying out Dear ImGUI and OpenGL for a bunch of small apps like a drawing canvas, image editor, and more!    
 there's not much to see at the moment though.    
     
-![current look](demo.gif)
-	
+drawing canvas:    
+![current look](screenshots/drawingcanvas.png)
+    	
+image editor:   
+![image editor](screenshots/image_editor.png)    
+    
+3d model viewer:    
+![3d model viewer](screenshots/modelviewer.png)    
+    
 ## dependencies:    
 - [Dear ImGUI](https://github.com/ocornut/imgui)    
 - [SDL2](https://www.libsdl.org/download-2.0.php) (the development library)    
