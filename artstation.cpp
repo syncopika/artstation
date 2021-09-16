@@ -86,13 +86,10 @@ std::string trimString(std::string str){
 	return trimmed;
 }
 
-void showDrawingCanvas(bool* p_open){
+void showDrawingCanvas(){
 	// set up canvas for drawing on
 	// TODO: be able to clear canvas (need to empty canvasPoints and lastSegmentIndexes)
-	if(!ImGui::Begin("drawing canvas", p_open)){
-		ImGui::End();
-		return;
-	}
+	ImGui::BeginChild("drawing canvas", ImVec2(0, 800), true);
 	
 	// color wheel stuff
 	static ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // note this isn't assignment but just initialization
@@ -194,7 +191,7 @@ void showDrawingCanvas(bool* p_open){
 	// show color wheel
 	ImGui::ColorPicker4("MyColor##4", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
 	
-	ImGui::End();
+	ImGui::EndChild();
 }
 
 int correctRGB(int channel){
@@ -207,12 +204,9 @@ int correctRGB(int channel){
 	return channel;
 }
 
-void showImageEditor(bool* p_open){
+void showImageEditor(){
 	
-	if(!ImGui::Begin("image editor", p_open)){
-		ImGui::End();
-		return;
-	}
+	ImGui::BeginChild("image editor", ImVec2(0, 800), true);
 	
 	static bool showImage = false;
 	static GLuint texture = 0;
@@ -344,7 +338,7 @@ void showImageEditor(bool* p_open){
 		}
 	}
 	
-	ImGui::End();
+	ImGui::EndChild();
 }
 
 // https://github.com/tinyobjloader/tinyobjloader
@@ -588,7 +582,6 @@ glm::mat4 createPerspectiveMatrix(float fovAngle, float aspect, float near, floa
 }
 
 void show3dModelViewer(
-	bool* p_open, 
 	GLuint offscreenFrameBuf, 
 	GLuint offscreenTexture, 
 	GLuint shaderProgram,
@@ -599,10 +592,7 @@ void show3dModelViewer(
 	auto startTime
 	){
 		
-	if(!ImGui::Begin("3d model viewer", p_open)){
-		ImGui::End();
-		return;
-	}	
+	ImGui::BeginChild("3d model viewer", ImVec2(0, 800), true);
 	
 	static bool toggleWireframe = false;
 	
@@ -615,7 +605,7 @@ void show3dModelViewer(
 	if(!reader.ParseFromFile(filepath, config)){
 		if(!reader.Error().empty()){
 			ImGui::Text("TinyObjReader: %s", (reader.Error()).c_str());
-			ImGui::End();
+			ImGui::EndChild();
 		}
 	}else{
 		if(!reader.Warning().empty()){
@@ -771,7 +761,7 @@ void show3dModelViewer(
 		ImGui::Text("%f", cameraCurrZ);
 	}
 	
-	ImGui::End();
+	ImGui::EndChild();
 }
 
 // Main code
@@ -852,8 +842,8 @@ int main(int, char**)
 
     // Our state
     //bool show_demo_window = true;
-	bool showCanvasForDrawingFlag = true;
-	bool showImageEditorFlag = true;
+	bool showCanvasForDrawingFlag = false;
+	bool showImageEditorFlag = false;
 	bool show3dModelViewerFlag = true;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	
@@ -894,16 +884,14 @@ int main(int, char**)
 	
     // Main loop
     bool done = false;
-    while (!done)
-    {
+    while(!done){
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         SDL_Event event;
-        while (SDL_PollEvent(&event))
-        {
+        while (SDL_PollEvent(&event)){
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
@@ -935,18 +923,18 @@ int main(int, char**)
 		//	- have a subwindow for image editing + export
 		//  - have a subwindow for drawing? brush examples?
 		// 	- docked windows?
-		// 	- start working on learning how to import an fbx or obj model?
 		//  - audio stuff too? :D
 		
+		ImGui::Begin("parent");
+		
 		if(showCanvasForDrawingFlag) 
-			showDrawingCanvas(&showCanvasForDrawingFlag);
+			showDrawingCanvas();
 		
 		if(showImageEditorFlag)
-			showImageEditor(&showImageEditorFlag);
+			showImageEditor();
 		
 		if(show3dModelViewerFlag){
 			show3dModelViewer(
-				&show3dModelViewerFlag,
 				offscreenFrameBuf,
 				offscreenTexture,
 				shaderProgram,
@@ -957,6 +945,8 @@ int main(int, char**)
 				startTime
 			);
 		}
+		
+		ImGui::End();
 
         // Rendering
         ImGui::Render();
