@@ -4,7 +4,7 @@ there's not much to see at the moment though.
     
 drawing canvas:    
 ![current look](screenshots/drawingcanvas.png)
-    	
+    
 image editor:   
 ![image editor](screenshots/image_editor.png)    
     
@@ -13,16 +13,20 @@ image editor:
     
 ## dependencies:    
 - [Dear ImGUI](https://github.com/ocornut/imgui)    
-- [SDL2](https://www.libsdl.org/download-2.0.php) (the development library)    
-- OpenGL 3 (came with MinGW v6.3.0 in `MinGW/include/GL`)    
+- [SDL2](https://www.libsdl.org/download-2.0.php)    
+- OpenGL 3 (comes with MinGW in `MinGW/include/GL`)    
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)   
 - [tiny_object_loader.h](https://github.com/tinyobjloader/tinyobjloader)
 - [GLEW](http://glew.sourceforge.net/install.html)   
     
 ## installation:    
-If using Windows, you just need MinGW (should include the core OpenGL dependency needed for Dear ImGUI to work), MSYS for running `make` and SDL2.    
+If using Windows, you'll need MinGW (should include the core OpenGL dependency needed for Dear ImGUI to work), MSYS for running `make` and SDL2.    
     
+For the SDL2 dependency, I downloaded the development library version.    
+	
 For the GLEW dependency, I downloaded the precompiled binaries and followed the "Using GLEW as a shared library" route noted [here](http://glew.sourceforge.net/install.html). If using MinGW (I'm still using `v6.3.0` btw), you should put `glew32.lib` in `MinGW/lib`.
+	
+For the GLM library dependency, I just `git clone`'d its GitHub repo.    
 	
 Once in this directory, update `Makefile` so that the directory paths for SDL2 and GLEW match the paths for their location on your computer. Then run `make`.    
     

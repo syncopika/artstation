@@ -13,6 +13,7 @@ https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html
 https://github.com/ocornut/imgui/issues/74 -> Buttons with identical labels do not work
 https://github.com/ocornut/imgui/issues/853 -> Is it possible to set an ImGui window as the main application window?
 https://ruurdsdevlog.wordpress.com/2020/03/07/c-desktop-application-with-dear-imgui/
+https://github.com/ocornut/imgui/issues/2441 -> addrect vs addline -> i don't think directly useful for my curret needs but very interesting!
 
 opengl stuff ================================================
 https://www.gamedev.net/forums/topic/526599-modify-data-stored-in-gluint/4412971/

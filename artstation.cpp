@@ -87,16 +87,6 @@ std::string trimString(std::string str){
 }
 
 void showDrawingCanvas(){
-	// set up canvas for drawing on
-	// TODO: be able to clear canvas (need to empty canvasPoints and lastSegmentIndexes)
-	ImGui::BeginChild("drawing canvas", ImVec2(0, 800), true);
-	
-	// color wheel stuff
-	static ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // note this isn't assignment but just initialization
-	static bool ref_color = false;
-	static ImVec4 ref_color_v(1.0f, 0.0f, 1.0f, 0.5f);
-	ImGuiColorEditFlags flags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_PickerHueWheel;
-	
 	// keep track of canvas data
 	static std::vector<ImVec2> canvasPoints;
 	
@@ -106,15 +96,21 @@ void showDrawingCanvas(){
 	// keep track of colors
 	static std::vector<ImU32> canvasPointColors;
 	
+	// color wheel stuff
+	static ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // note this isn't assignment but just initialization
+	static bool ref_color = false;
+	static ImVec4 ref_color_v(1.0f, 0.0f, 1.0f, 0.5f);
+	ImGuiColorEditFlags flags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR;
+	ImU32 selectedColor = ImColor(color);
+	
 	//static ImVec2 scrolling(0.0f, 0.0f);
 	
-	ImU32 selectedColor = ImColor(color);
+	ImGui::BeginChild("drawing canvas", ImVec2(0, 0), true);
+	ImGui::Columns(2, "stuff");
 	
 	ImVec2 canvas_pos0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
 	ImVec2 canvas_size = ImGui::GetContentRegionAvail();   // Resize canvas to what's available
-	if (canvas_size.x < 150.0f) canvas_size.x = 150.0f;
-	if (canvas_size.y < 150.0f) canvas_size.y = 150.0f;
-	ImVec2 canvas_pos1 = ImVec2(canvas_pos0.x + canvas_size.x, canvas_pos0.y + canvas_size.y);
+	ImVec2 canvas_pos1 = ImVec2(canvas_size.x*0.95f, canvas_size.y*0.95f);
 
 	// Draw border and background color
 	ImGuiIO& io = ImGui::GetIO();
@@ -123,7 +119,7 @@ void showDrawingCanvas(){
 	draw_list->AddRect(canvas_pos0, canvas_pos1, IM_COL32(255, 255, 255, 255));
 
 	// This will catch our interactions
-	ImGui::InvisibleButton("drawingCanvas", canvas_size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+	ImGui::InvisibleButton("drawingCanvas", canvas_pos1, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
 	
 	// Hovered - this is so we ensure that we take into account only mouse interactions that occur
 	// on this particular canvas. otherwise it could pick up mouse clicks that occur on other windows as well.
@@ -182,14 +178,20 @@ void showDrawingCanvas(){
 		lastSegmentIndexes.insert(lastIdx); //lastPointIndex = lastIdx;
 	}
 	
+	ImGui::NextColumn();
+	
+	// show color wheel
+	ImGui::ColorPicker4("MyColor", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
+	
+	ImGui::Dummy(ImVec2(0.0f, 5.0f));
+	
 	if(ImGui::Button("clear")){
 		canvasPoints.clear();
 		lastSegmentIndexes.clear();
 		canvasPointColors.clear();
 	}
 	
-	// show color wheel
-	ImGui::ColorPicker4("MyColor##4", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
+	ImGui::Columns();
 	
 	ImGui::EndChild();
 }
@@ -205,7 +207,6 @@ int correctRGB(int channel){
 }
 
 void showImageEditor(){
-	
 	ImGui::BeginChild("image editor", ImVec2(0, 800), true);
 	
 	static bool showImage = false;
@@ -636,7 +637,7 @@ void show3dModelViewer(
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
 		}else{
-			// draw the triangle to the offscreen frame buffer
+			// draw to the offscreen frame buffer
 			// adjust the glviewport to be drawn to so the image comes out correctly
 			glBindFramebuffer(GL_FRAMEBUFFER, offscreenFrameBuf);
 			glViewport(0, 0, 500, 500);
@@ -710,7 +711,11 @@ void show3dModelViewer(
 			int pixelDataLen = w*h*3;
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
+			
+			// TODO: center the image?
+			//ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 0));
 			ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(w, h));
+			
 			delete pixelData;
 			
 			// unbind offscreenFrameBuf and use default framebuffer again (show the gui window) - I think that's how this works?
@@ -805,7 +810,10 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("ArtStation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+	
+	const int sdlWidth = 1280;
+	const int sdlHeight = 720;
+    SDL_Window* window = SDL_CreateWindow("ArtStation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, sdlWidth, sdlHeight, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -864,7 +872,7 @@ int main(int, char**)
 	GLuint uvBuffer;
 	glGenBuffers(1, &uvBuffer);
 	
-	setupCube(vbo, vao);
+	//setupCube(vbo, vao);
 	//setupTriangle(vbo, vao);
 	
 	GLuint shaderProgram;
@@ -891,7 +899,7 @@ int main(int, char**)
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         SDL_Event event;
-        while (SDL_PollEvent(&event)){
+        while(SDL_PollEvent(&event)){
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
@@ -904,15 +912,33 @@ int main(int, char**)
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
 		
+		int currSDLWidth;
+		int currSDLHeight;
+		SDL_GetWindowSize(window, &currSDLWidth, &currSDLHeight);
+		
 		if(ImGui::BeginMainMenuBar()){
 			if(ImGui::BeginMenu("Apps")){
-				ImGui::MenuItem("drawing canvas", NULL, &showCanvasForDrawingFlag);
-				ImGui::MenuItem("image editor", NULL, &showImageEditorFlag);
-				ImGui::MenuItem("3d model viewer", NULL, &show3dModelViewerFlag);
+				if(ImGui::MenuItem("drawing canvas", NULL, &showCanvasForDrawingFlag)){
+					showImageEditorFlag = false;
+					show3dModelViewerFlag = false;
+				}
+				
+				if(ImGui::MenuItem("image editor", NULL, &showImageEditorFlag)){
+					showCanvasForDrawingFlag = false;
+					show3dModelViewerFlag = false;
+				}
+				
+				if(ImGui::MenuItem("3d model viewer", NULL, &show3dModelViewerFlag)){
+					showCanvasForDrawingFlag = false;
+					showImageEditorFlag = false;
+				}
+				
 				ImGui::EndMenu();
 			}
 			ImGui::EndMainMenuBar();
 		}
+		
+		ImGui::Begin("App", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         //if (show_demo_window)
@@ -925,15 +951,14 @@ int main(int, char**)
 		// 	- docked windows?
 		//  - audio stuff too? :D
 		
-		ImGui::Begin("parent");
+		//ImGui::SetNextWindowPos(ImVec2(0, 15));
+		//ImGui::SetNextWindowSize(ImVec2(width, height));
 		
-		if(showCanvasForDrawingFlag) 
+		if(showCanvasForDrawingFlag){
 			showDrawingCanvas();
-		
-		if(showImageEditorFlag)
+		}else if(showImageEditorFlag){
 			showImageEditor();
-		
-		if(show3dModelViewerFlag){
+		}else if(show3dModelViewerFlag){
 			show3dModelViewer(
 				offscreenFrameBuf,
 				offscreenTexture,
