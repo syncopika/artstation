@@ -183,7 +183,7 @@ void showDrawingCanvas(){
 	// show color wheel
 	ImGui::ColorPicker4("MyColor", (float*)&color, flags, ref_color ? &ref_color_v.x : NULL);
 	
-	ImGui::Dummy(ImVec2(0.0f, 5.0f));
+	ImGui::Dummy(ImVec2(0.0f, 5.0f)); // add some vertical spacing
 	
 	if(ImGui::Button("clear")){
 		canvasPoints.clear();
@@ -558,6 +558,9 @@ void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
 	glBindRenderbuffer(GL_RENDERBUFFER, 0); // unbind after allocating storage
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
 	
+	// unbind framebuffer now since we don't need it yet (we just needed to bind it to set it up)
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	
 	//GLenum drawBuffers[1] = {GL_COLOR_ATTACHMENT0};
 	//glDrawBuffers(1, drawBuffers);
 }
@@ -726,6 +729,8 @@ void show3dModelViewer(
 			toggleWireframe = !toggleWireframe; 
 		}
 		
+		ImGui::Dummy(ImVec2(0.0f, 5.0f)); // add some vertical spacing
+		
 		// control camera x movement
 		ImGui::Text("move along X: ");
 		ImGui::SameLine();
@@ -850,9 +855,9 @@ int main(int, char**)
 
     // Our state
     //bool show_demo_window = true;
-	bool showCanvasForDrawingFlag = false;
+	bool showCanvasForDrawingFlag = true;
 	bool showImageEditorFlag = false;
-	bool show3dModelViewerFlag = true;
+	bool show3dModelViewerFlag = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 	
 	// set up GLEW
@@ -938,6 +943,8 @@ int main(int, char**)
 			ImGui::EndMainMenuBar();
 		}
 		
+		ImGui::SetNextWindowSize(ImVec2(currSDLWidth, currSDLHeight*0.98f));
+		ImGui::SetNextWindowPos(ImVec2(0, 18));
 		ImGui::Begin("App", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -950,9 +957,6 @@ int main(int, char**)
 		//  - have a subwindow for drawing? brush examples?
 		// 	- docked windows?
 		//  - audio stuff too? :D
-		
-		//ImGui::SetNextWindowPos(ImVec2(0, 15));
-		//ImGui::SetNextWindowSize(ImVec2(width, height));
 		
 		if(showCanvasForDrawingFlag){
 			showDrawingCanvas();
