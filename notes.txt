@@ -2,13 +2,18 @@ makefile stuff ==============================================
 https://stackoverflow.com/questions/53965259/makefile-that-covers-interfaces-h-files
 https://stackoverflow.com/questions/41205042/c-makefile-headers-and-cpp
 https://www.cs.colby.edu/maxwell/courses/tutorials/maketutor/
+https://stackoverflow.com/questions/519342/what-is-the-difference-between-i-and-l-in-makefile
 
 imgui stuff =================================================
 https://github.com/ocornut/imgui/blob/master/examples/example_sdl_opengl3/main.cpp
-https://github.com/ocornut/imgui/issues/351 - dock panel layout
+https://github.com/ocornut/imgui/issues/351 -> dock panel layout
 https://gamedev.stackexchange.com/questions/140693/how-can-i-render-an-opengl-scene-into-an-imgui-window
 https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 https://blog.conan.io/2019/06/26/An-introduction-to-the-Dear-ImGui-library.html
+https://github.com/ocornut/imgui/issues/74 -> Buttons with identical labels do not work
+https://github.com/ocornut/imgui/issues/853 -> Is it possible to set an ImGui window as the main application window?
+https://ruurdsdevlog.wordpress.com/2020/03/07/c-desktop-application-with-dear-imgui/
+https://github.com/ocornut/imgui/issues/2441 -> addrect vs addline -> i don't think directly useful for my curret needs but very interesting!
 
 opengl stuff ================================================
 https://www.gamedev.net/forums/topic/526599-modify-data-stored-in-gluint/4412971/
@@ -24,7 +29,9 @@ https://github.com/ocornut/imgui/issues/90 -> learned about glActiveTexture here
 https://stackoverflow.com/questions/39093499/qt-opengl-gldrawelements-and-gldrawarray-show-only-blank-screen 
   -> set up vbo and vao first, then shaders (but also if I had followed the open.gl tutorial more carefully I should've noticed this -_-) 
 https://learnopengl.com/Getting-started/Shaders
-
+https://stackoverflow.com/questions/18210396/opengl-how-to-unbind-and-delete-buffers-properly
+https://community.khronos.org/t/do-i-need-to-bind-and-unbind-my-vertex-buffer-every-draw-call/104150
+https://stackoverflow.com/questions/3498581/in-opengl-what-is-the-simplest-way-to-create-a-perspective-view-using-only-open
 
 TODO:
 - move 3d stuff to a separate file?
