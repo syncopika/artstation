@@ -16,22 +16,22 @@ OPENGL_INCLUDE = C:\libraries\glew-2.1.0\include
 # point to the location of the GLM library
 GLM_INCLUDE = C:\libraries\glm
 
+# the apps, e.g. drawing canvas, 3d viewer, etc.
 APPS_DIR = apps
-APPS = $(APPS_DIR)/image_editor.hh
 
-# other dependencies (e.g. the apps, the imgui stuff)
-OTHER_DIR = external
-OTHER_DEPS = $(OTHER_DIR)/tiny_obj_loader.h $(APPS)
+# other dependencies like stb_img, tiny_obj_loader
+OTHER_LIBS_DIR = external
 
 IMGUI_DIR = imgui
 SOURCES = artstation.cpp
-SOURCES += $(APPS_DIR)/image_editor.cpp
+SOURCES += $(APPS_DIR)/image_editor.cpp $(APPS_DIR)/drawing_canvas.cpp  $(APPS_DIR)/3d_viewer.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 
 # specific to our backend (sdl + opengl)
 SOURCES += $(IMGUI_DIR)/imgui_impl_sdl.cpp $(IMGUI_DIR)/imgui_impl_opengl3.cpp
 
-CXXFLAGS = -Wall -Wformat -std=c++14 -I$(SDL_INCLUDE) -I$(IMGUI_DIR)
+# note all the include flags for all the header file locations
+CXXFLAGS = -Wall -Wformat -std=c++14 -I$(SDL_INCLUDE) -I$(IMGUI_DIR) -I$(OPENGL_INCLUDE) -I$(GLM_INCLUDE) -I$(OTHER_LIBS_DIR) -I$(APPS_DIR)
 
 GLEW_LIBS = -lglew32 -lglu32
 
@@ -43,10 +43,13 @@ OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 EXE = artstation
 
+# build apps
+%.o:apps/%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 # build main
-%.o:%.cpp $(OTHER_DEPS)
-	$(CXX) $(CXXFLAGS) -I$(OPENGL_INCLUDE) -I$(GLM_INCLUDE) -c -o $@ $<
+%.o:%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 # build imgui dependencies
 %.o:$(IMGUI_DIR)/%.cpp
