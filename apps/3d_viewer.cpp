@@ -124,7 +124,7 @@ void setupShaders(GLuint& shaderProgram){
 	
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
 	if(status != GL_TRUE){
-		std::cout << "error compiling vertex shader!" << std::endl;
+		std::cout << "error compiling vertex shader!\n";
 	}
 	
 	// compile frag shader
@@ -134,7 +134,7 @@ void setupShaders(GLuint& shaderProgram){
 	
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
 	if(status != GL_TRUE){
-		std::cout << "error compiling fragment shader!" << std::endl;
+		std::cout << "error compiling fragment shader!\n";
 	}
 	
 	// combine shaders into a program
@@ -202,7 +202,7 @@ void show3dModelViewer(
 	
 	static bool toggleWireframe = false;
 	
-	std::string filepath = "assets/battleship.obj";
+	std::string filepath("assets/battleship.obj");
 	tinyobj::ObjReaderConfig config;
 	config.mtl_search_path = "./";
 	
@@ -240,7 +240,7 @@ void show3dModelViewer(
 		//glBufferData(GL_ARRAY_BUFFER, sizeof(uvs)*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 		
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
+			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
 		}else{
 			// draw to the offscreen frame buffer
 			// adjust the glviewport to be drawn to so the image comes out correctly
@@ -278,12 +278,12 @@ void show3dModelViewer(
 			
 			// set up modelview matrix (and do all the necessary transformations)
 			// store y rotation and rotate based on last y rotation so the model will rotate 360
-			static glm::mat4 lastYRot = glm::mat4(1.0);
+			static glm::mat4 lastYRot(1.0);
 			lastYRot = glm::rotate(lastYRot, angleToRads(0.5f), glm::vec3(0,1,0));
 			
 			// the following should do: move model to origin, scale it, rotate about x, rotate about y, then move it to final position (i.e. further away from the camera along z)
 			// these operations here are ones we want to keep constant through each render, so we do them on the identity matrix (not using the previous object's transformation matrix)
-			glm::mat4 mvp = glm::mat4(1.0);
+			glm::mat4 mvp(1.0);
 			mvp = glm::translate(mvp, glm::vec3(cameraCurrX, cameraCurrY, cameraCurrZ));
 			mvp = mvp * lastYRot; // rotate about Y based on last rotation
 			mvp = glm::rotate(mvp, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
