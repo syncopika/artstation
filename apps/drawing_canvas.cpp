@@ -9,6 +9,9 @@ void showDrawingCanvas(){
 	
 	// keep track of colors
 	static std::vector<ImU32> canvasPointColors;
+    
+	// brush size
+	static float brushSize = 3.0f;
 	
 	// color wheel stuff
 	static ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // note this isn't assignment but just initialization
@@ -75,15 +78,15 @@ void showDrawingCanvas(){
 		if(lastSegmentIndexes.find(i) != lastSegmentIndexes.end()){
 			//std::cout << "last point index: " << lastPointIndex << std::endl;				
 			// don't draw a line from this point to the next
-			drawList->AddCircleFilled(p1, 4.0f, theColor, 8.0f);
+			drawList->AddCircleFilled(p1, brushSize-1.5f, theColor, 8.0f);
 			continue;
 		}
 		if(i < numPoints - 1){
 			// connect the points
-			drawList->AddLine(p1, p2, theColor, 8.0f);
+			drawList->AddLine(p1, p2, theColor, brushSize);
 		}else{
 			// just draw point
-			drawList->AddCircle(p1, 4.0f, theColor, 8.0f);
+			drawList->AddCircle(p1, brushSize-1.5f, theColor, 8.0f);
 		}
 	}
 	
@@ -99,6 +102,10 @@ void showDrawingCanvas(){
 	
 	ImGui::Dummy(ImVec2(0.0f, 5.0f)); // add some vertical spacing
 	
+	ImGui::SliderFloat("brush size", &brushSize, 1.0f, 10.0f);
+    
+	ImGui::Dummy(ImVec2(0.0f, 5.0f));
+    
 	if(ImGui::Button("clear")){
 		canvasPoints.clear();
 		lastSegmentIndexes.clear();
