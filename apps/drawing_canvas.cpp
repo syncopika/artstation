@@ -7,8 +7,9 @@ void showDrawingCanvas(){
 	// use this to keep track of where each separately drawn segement ends because everything gets redrawn each re-render from the beginning
 	static std::set<int> lastSegmentIndexes;
 	
-	// keep track of colors
+	// keep track of colors and brush size as well so whenever we change those things, previously drawn strokes don't get changed
 	static std::vector<ImU32> canvasPointColors;
+	static std::vector<float> canvasPointSizes;
     
 	// brush size
 	static float brushSize = 3.0f;
@@ -50,13 +51,15 @@ void showDrawingCanvas(){
 	{
 		canvasPoints.push_back(mousePosInCanvas);
 		canvasPointColors.push_back(selectedColor);
+		canvasPointSizes.push_back(brushSize);
 	}
 	
 	ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-	if (isHovered && isActive && (dragDelta.x > 0 || dragDelta.y > 0))
+	if (isHovered && isActive && (std::abs(dragDelta.x) > 0 || std::abs(dragDelta.y) > 0))
 	{
 		canvasPoints.push_back(mousePosInCanvas);
 		canvasPointColors.push_back(selectedColor);
+		canvasPointSizes.push_back(brushSize);
 	}
 	
 	int lastIdx = -1;
@@ -73,20 +76,22 @@ void showDrawingCanvas(){
 	for(int i = 0; i < numPoints; i++){
 		ImVec2 p1 = ImVec2(origin.x + canvasPoints[i].x, origin.y + canvasPoints[i].y);
 		ImVec2 p2 = ImVec2(origin.x + canvasPoints[i+1].x, origin.y + canvasPoints[i+1].y);
+		
 		ImU32 theColor = canvasPointColors[i];
+		float theSize = canvasPointSizes[i];
 		
 		if(lastSegmentIndexes.find(i) != lastSegmentIndexes.end()){
 			//std::cout << "last point index: " << lastPointIndex << std::endl;				
 			// don't draw a line from this point to the next
-			drawList->AddCircleFilled(p1, brushSize-1.5f, theColor, 8.0f);
+			drawList->AddCircleFilled(p1, theSize-1.5f, theColor, 8.0f);
 			continue;
 		}
 		if(i < numPoints - 1){
 			// connect the points
-			drawList->AddLine(p1, p2, theColor, brushSize);
+			drawList->AddLine(p1, p2, theColor, theSize);
 		}else{
 			// just draw point
-			drawList->AddCircle(p1, brushSize-1.5f, theColor, 8.0f);
+			drawList->AddCircle(p1, theSize-1.5f, theColor, 8.0f);
 		}
 	}
 	
@@ -110,6 +115,7 @@ void showDrawingCanvas(){
 		canvasPoints.clear();
 		lastSegmentIndexes.clear();
 		canvasPointColors.clear();
+		canvasPointSizes.clear();
 	}
 	
 	ImGui::Columns();

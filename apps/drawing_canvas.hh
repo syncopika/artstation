@@ -4,8 +4,9 @@
 
 #include "imgui.h" // makefile include flag locates imgui so no need for relative path
 
-#include <vector>
+#include <cmath>
 #include <set>
+#include <vector>
 
 void showDrawingCanvas();
 

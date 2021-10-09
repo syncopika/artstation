@@ -242,10 +242,14 @@ void show3dModelViewer(
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
 		}else{
+			
+			int viewportHeight = 500;
+			int viewportWidth = 500;
+			
 			// draw to the offscreen frame buffer
 			// adjust the glviewport to be drawn to so the image comes out correctly
 			glBindFramebuffer(GL_FRAMEBUFFER, offscreenFrameBuf);
-			glViewport(0, 0, 500, 500);
+			glViewport(0, 0, viewportWidth, viewportHeight);
 			glClearColor(0.62f, 0.73f, 0.78f, 0.0f); // the color of the background
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
@@ -311,15 +315,13 @@ void show3dModelViewer(
 			
 			// grab the offscreen texture and draw it to an imgui image
 			glActiveTexture(GL_TEXTURE1);
-			int w = 500;
-			int h = 500;
-			int pixelDataLen = w*h*3;
+			int pixelDataLen = viewportWidth*viewportHeight*3;
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
 			
-			// TODO: center the image?
-			//ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 0));
-			ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(w, h));
+			// center the image
+			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
+			ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(viewportWidth, viewportHeight));
 			
 			delete pixelData;
 			
@@ -327,50 +329,29 @@ void show3dModelViewer(
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 		
+		//ImGui::Indent(ImGui::GetWindowSize().x/2); TODO: can't seem to use 2 indents? :/
+		// I'd like to indent the button a different amount from the amount for the sliders
+		
+		ImGui::Indent(ImGui::GetWindowSize().x/3); // center the sliders
 		if(ImGui::Button("toggle wireframe")){
 			toggleWireframe = !toggleWireframe; 
 		}
 		
-		ImGui::Dummy(ImVec2(0.0f, 5.0f)); // add some vertical spacing
+		ImGui::PushItemWidth(ImGui::GetWindowSize().x/4); // make the sliders a bit smaller in length
+		
+		ImGui::Dummy(ImVec2(0.0f, 3.0f)); // add some vertical spacing
 		
 		// control camera x movement
-		ImGui::Text("move along X: ");
-		ImGui::SameLine();
-		if(ImGui::Button("+x")){
-			cameraCurrX += 0.5f;
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("-x")){
-			cameraCurrX -= 0.5f;
-		}
-		ImGui::SameLine();
-		ImGui::Text("%f", cameraCurrX);
+		ImGui::SliderFloat("move along x", &cameraCurrX, -5.0f, 5.0f);
+		ImGui::Dummy(ImVec2(0.0f, 3.0f));
 		
 		// control camera y movement
-		ImGui::Text("move along Y: ");
-		ImGui::SameLine();
-		if(ImGui::Button("+y")){
-			cameraCurrY += 0.5f;
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("-y")){
-			cameraCurrY -= 0.5f;
-		}
-		ImGui::SameLine();
-		ImGui::Text("%f", cameraCurrY);
+		ImGui::SliderFloat("move along y", &cameraCurrY, -5.0f, 5.0f);
+		ImGui::Dummy(ImVec2(0.0f, 3.0f));
 		
 		// control camera z movement
-		ImGui::Text("move along Z: ");
-		ImGui::SameLine();
-		if(ImGui::Button("+z")){
-			cameraCurrZ += 0.5f;
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("-z")){
-			cameraCurrZ -= 0.5f;
-		}
-		ImGui::SameLine();
-		ImGui::Text("%f", cameraCurrZ);
+		ImGui::SliderFloat("move along z", &cameraCurrZ, -25.0f, 0.0f);
+		ImGui::Dummy(ImVec2(0.0f, 3.0f));
 	}
 	
 	ImGui::EndChild();
