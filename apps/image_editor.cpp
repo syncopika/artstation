@@ -86,6 +86,7 @@ void showImageEditor(){
 	// for filters that have customizable parameters,
 	// have a bool flag so we can toggle the params
 	static bool showSaturateParams = false;
+	static bool showOutlineParams = false;
 	
 	bool importImageClicked = ImGui::Button("import image");
 	ImGui::SameLine();
@@ -118,8 +119,8 @@ void showImageEditor(){
 		// make sure we use the right texture (since we also have one for rendering an offscreen frame buffer scene on)
 		glActiveTexture(GL_TEXTURE0);
 		
-		if (ImGui::Button("grayscale")){	
-			// grayscale the image data
+		// GRAYSCALE
+		if(ImGui::Button("grayscale")){
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
 			
@@ -138,7 +139,8 @@ void showImageEditor(){
 		}
 		ImGui::SameLine();
 		
-		if (ImGui::Button("invert")){		
+		// INVERT
+		if(ImGui::Button("invert")){
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
 			for(int i = 0; i < pixelDataLen - 4; i+=4){
@@ -151,8 +153,10 @@ void showImageEditor(){
 		}
 		ImGui::SameLine();
 		
-		if (ImGui::Button("saturate")){
+		// SATURATION
+		if(ImGui::Button("saturate")){
 			showSaturateParams = !showSaturateParams;
+			showOutlineParams = false; // TODO: figure out better way to do this
 		}
 		
 		if(showSaturateParams){
@@ -203,6 +207,93 @@ void showImageEditor(){
 			ImGui::SliderFloat("lumR", &lumR, 0.0f, 5.0f);
 			ImGui::SliderFloat("lumG", &lumG, 0.0f, 5.0f);
 			ImGui::SliderFloat("lumB", &lumB, 0.0f, 5.0f);
+		}
+		
+		// OUTLINE
+		if(ImGui::Button("outline")){
+			showOutlineParams = !showOutlineParams;
+			showSaturateParams = false;
+		}
+		
+		if(showOutlineParams){
+			unsigned char* pixelData = new unsigned char[pixelDataLen];
+			unsigned char* sourceImageCopy = new unsigned char[pixelDataLen];
+			
+			// use the original texture to get pixel data from
+			glActiveTexture(GL_TEXTURE2);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, sourceImageCopy);
+			
+			// for each pixel, check the above pixel (if it exists)
+			// if the above pixel is 'significantly' different (i.e. more than +/- 5 of rgb),
+			// color the above pixel black and the current pixel white. otherwise, both become white. 
+			static int limit = 10;
+			
+			bool setSameColor = false;
+			
+			for(int i = 0; i < imageHeight; i++){
+				for(int j = 0; j < imageWidth; j++){
+					// the current pixel is i*width + j
+					// the above pixel is (i-1)*width + j
+					if(i > 0){
+						int aboveIndexR = (i-1)*imageWidth*4 + j*4;
+						int aboveIndexG = (i-1)*imageWidth*4 + j*4 + 1;
+						int aboveIndexB = (i-1)*imageWidth*4 + j*4 + 2;
+						
+						int currIndexR = i*imageWidth*4 + j*4;
+						int currIndexG = i*imageWidth*4 + j*4 + 1;
+						int currIndexB = i*imageWidth*4 + j*4 + 2;
+						
+						uint8_t aboveR = sourceImageCopy[aboveIndexR];
+						uint8_t aboveG = sourceImageCopy[aboveIndexG];
+						uint8_t aboveB = sourceImageCopy[aboveIndexB];
+					
+						uint8_t currR = sourceImageCopy[currIndexR]; 
+						uint8_t currG = sourceImageCopy[currIndexG];
+						uint8_t currB = sourceImageCopy[currIndexB];
+						
+						if(aboveR - currR < limit && aboveR - currR > -limit){
+							if(aboveG - currG < limit && aboveG - currG > -limit){
+								if(aboveB - currB < limit && aboveB - currB > -limit){
+									setSameColor = true;
+								}else{
+									setSameColor = false;
+								}
+							}else{
+								setSameColor = false;
+							}
+						}else{
+							setSameColor = false;
+						}
+						
+						if(!setSameColor){
+							pixelData[aboveIndexR] = 0;
+							pixelData[aboveIndexG] = 0;
+							pixelData[aboveIndexB] = 0;
+							
+							pixelData[currIndexR] = 255; 
+							pixelData[currIndexG] = 255; 
+							pixelData[currIndexB] = 255; 
+						}else{
+							pixelData[aboveIndexR] = 255;
+							pixelData[aboveIndexG] = 255;
+							pixelData[aboveIndexB] = 255;
+							
+							pixelData[currIndexR] = 255; 
+							pixelData[currIndexG] = 255; 
+							pixelData[currIndexB] = 255; 
+						}
+					}
+				}
+			}
+			
+			// after editing pixel data, write it to the other texture
+			glActiveTexture(GL_TEXTURE0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			delete pixelData;
+			delete sourceImageCopy;
+			
+			ImGui::SliderInt("color difference limit", &limit, 1, 20);
 		}
 	}
 	

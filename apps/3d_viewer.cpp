@@ -198,7 +198,7 @@ void show3dModelViewer(
 	std::chrono::time_point<std::chrono::high_resolution_clock> startTime
 	){
 		
-	ImGui::BeginChild("3d model viewer", ImVec2(0, 800), true);
+	ImGui::BeginChild("3d model viewer", ImVec2(0, 760), true);
 	
 	static bool toggleWireframe = false;
 	
@@ -351,7 +351,7 @@ void show3dModelViewer(
 		
 		// control camera z movement
 		ImGui::SliderFloat("move along z", &cameraCurrZ, -25.0f, 0.0f);
-		ImGui::Dummy(ImVec2(0.0f, 3.0f));
+		ImGui::Dummy(ImVec2(0.0f, 1.0f));
 	}
 	
 	ImGui::EndChild();

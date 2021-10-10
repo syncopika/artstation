@@ -34,5 +34,6 @@ https://community.khronos.org/t/do-i-need-to-bind-and-unbind-my-vertex-buffer-ev
 https://stackoverflow.com/questions/3498581/in-opengl-what-is-the-simplest-way-to-create-a-perspective-view-using-only-open
 
 TODO:
-- move 3d stuff to a separate file?
-- get each 'app' in its own menu item and not have them simultaneous?
+- move 3d stuff to a separate file? (need to separate utility functions?)
+- image export for image editor: https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-stb_image-libraries/
+- move image filter code to separate file?
