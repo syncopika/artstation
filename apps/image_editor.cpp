@@ -4,6 +4,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 std::string trimString(std::string str){
 	std::string trimmed("");
 	std::string::iterator it;
@@ -26,10 +29,11 @@ int correctRGB(int channel){
 }
 
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* width, int* height){
+bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* width, int* height, int* channels){
 	int imageWidth = 0;
 	int imageHeight = 0;
-	unsigned char* imageData = stbi_load(filename, &imageWidth, &imageHeight, NULL, 4);
+	int imageChannels = 4; //rgba
+	unsigned char* imageData = stbi_load(filename, &imageWidth, &imageHeight, &imageChannels, 4);
 	if(imageData == NULL){
 		return false;
 	}
@@ -69,6 +73,7 @@ bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* 
 	*originalImage = imageTexture2;
 	*width = imageWidth;
 	*height = imageHeight;
+	*channels = imageChannels;
 	
 	return true;
 }
@@ -81,6 +86,7 @@ void showImageEditor(){
 	static GLuint originalImage = 1;
 	static int imageHeight = 0;
 	static int imageWidth = 0;
+	static int imageChannels = 4; //rgba
 	static char importImageFilepath[64] = "assets/test_image.png";
 	
 	// for filters that have customizable parameters,
@@ -99,7 +105,7 @@ void showImageEditor(){
 		std::string filepath(importImageFilepath);
 		
 		if(trimString(filepath) != ""){
-			bool loaded = importImage(filepath.c_str(), &texture, &originalImage, &imageWidth, &imageHeight);
+			bool loaded = importImage(filepath.c_str(), &texture, &originalImage, &imageWidth, &imageHeight, &imageChannels);
 			if(loaded){
 				showImage = true;
 			}else{
@@ -128,7 +134,6 @@ void showImageEditor(){
 				unsigned char r = pixelData[i];
 				unsigned char g = pixelData[i+1];
 				unsigned char b = pixelData[i+2];
-				
 				unsigned char grey = (r+g+b)/3;
 				pixelData[i] = grey;
 				pixelData[i+1] = grey;
@@ -158,6 +163,25 @@ void showImageEditor(){
 			showSaturateParams = !showSaturateParams;
 			showOutlineParams = false; // TODO: figure out better way to do this
 		}
+		ImGui::SameLine();
+		
+		// OUTLINE
+		if(ImGui::Button("outline")){
+			showOutlineParams = !showOutlineParams;
+			showSaturateParams = false;
+		}
+		ImGui::SameLine();
+		
+		// EXPORT IMAGE
+		if(ImGui::Button("export image (.bmp)")){
+			unsigned char* pixelData = new unsigned char[pixelDataLen];
+			glActiveTexture(GL_TEXTURE0);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			
+			// TODO: allow image naming
+			// TODO: hardcoding 4 channels b/c not sure we were getting the right channel value back for the imageChannels variable?
+			stbi_write_bmp("artstation_image_export.bmp", imageWidth, imageHeight, 4, (void *)pixelData);
+		}
 		
 		if(showSaturateParams){
 			static float lumG = 0.5f;
@@ -167,7 +191,8 @@ void showImageEditor(){
 			
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			
-			// use the original texture to get pixel data from
+			// use another texture to get pixel data (notice GL_TEXTURE2 instead of GL_TEXTURE0)
+			// so that we don't clobber the same image texture with repeated operations (we always want to work on a fresh copy)
 			glActiveTexture(GL_TEXTURE2);
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
 			
@@ -207,12 +232,6 @@ void showImageEditor(){
 			ImGui::SliderFloat("lumR", &lumR, 0.0f, 5.0f);
 			ImGui::SliderFloat("lumG", &lumG, 0.0f, 5.0f);
 			ImGui::SliderFloat("lumB", &lumB, 0.0f, 5.0f);
-		}
-		
-		// OUTLINE
-		if(ImGui::Button("outline")){
-			showOutlineParams = !showOutlineParams;
-			showSaturateParams = false;
 		}
 		
 		if(showOutlineParams){

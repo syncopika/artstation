@@ -33,7 +33,13 @@ https://stackoverflow.com/questions/18210396/opengl-how-to-unbind-and-delete-buf
 https://community.khronos.org/t/do-i-need-to-bind-and-unbind-my-vertex-buffer-every-draw-call/104150
 https://stackoverflow.com/questions/3498581/in-opengl-what-is-the-simplest-way-to-create-a-perspective-view-using-only-open
 
+misc stuff ===================================================
+https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-stb_image-libraries/
+
+
 TODO:
 - move 3d stuff to a separate file? (need to separate utility functions?)
-- image export for image editor: https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-stb_image-libraries/
+- image export for image editor for png, jpg? also be able to name the exported image!
 - move image filter code to separate file?
+- be able to import .obj files, also include textures
+  - maybe trackball feature? :O
