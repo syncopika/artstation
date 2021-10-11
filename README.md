@@ -3,9 +3,11 @@ just trying out Dear ImGUI and OpenGL for a bunch of small apps like a drawing c
     
 drawing canvas:    
 ![current look](screenshots/drawingcanvas.png)
-    
+has adjustable brush width    
+	
 image editor:   
 ![image editor](screenshots/image_editor.png)    
+has some filters and an export image (as .bmp only currently) function
     
 3d model viewer:    
 ![3d model viewer](screenshots/modelviewer.png)    
@@ -16,7 +18,7 @@ app option menu:
 ## dependencies:    
 - [Dear ImGUI](https://github.com/ocornut/imgui)    
 - [SDL2](https://www.libsdl.org/download-2.0.php)    
-- [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h)   
+- [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h) and [stb_image_write.h](https://github.com/nothings/stb/blob/master/stb_image_write.h)   
 - [tiny_object_loader.h](https://github.com/tinyobjloader/tinyobjloader)
 - [GLEW](http://glew.sourceforge.net/install.html) for OpenGL    
     
@@ -28,7 +30,9 @@ For the SDL2 dependency, I downloaded the development library version.
 For the GLEW dependency, I downloaded the precompiled binaries and followed the "Using GLEW as a shared library" route noted [here](http://glew.sourceforge.net/install.html). If using MinGW (I'm using `v6.3.0` btw), you should put `glew32.lib` in `MinGW/lib`.
 	
 For the GLM library dependency, I just `git clone`'d its GitHub repo.    
-	
+    
+Note that the header file dependencies I'm using (stb_image, stb_image_write, tiny_object_loader) are in `/external`.
+    
 Once in this directory, update `Makefile` so that the directory paths for SDL2 and GLEW match the paths for their location on your computer. Then run `make`.    
     
 Don't forget that `SDL2.dll` and `glew32.dll` are needed in the same directory of the `.exe` application in order for it to run (they are included in this repo).    

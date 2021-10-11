@@ -124,7 +124,7 @@ void setupShaders(GLuint& shaderProgram){
 	
 	glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
 	if(status != GL_TRUE){
-		std::cout << "error compiling vertex shader!" << std::endl;
+		std::cout << "error compiling vertex shader!\n";
 	}
 	
 	// compile frag shader
@@ -134,7 +134,7 @@ void setupShaders(GLuint& shaderProgram){
 	
 	glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
 	if(status != GL_TRUE){
-		std::cout << "error compiling fragment shader!" << std::endl;
+		std::cout << "error compiling fragment shader!\n";
 	}
 	
 	// combine shaders into a program
@@ -198,11 +198,11 @@ void show3dModelViewer(
 	std::chrono::time_point<std::chrono::high_resolution_clock> startTime
 	){
 		
-	ImGui::BeginChild("3d model viewer", ImVec2(0, 800), true);
+	ImGui::BeginChild("3d model viewer", ImVec2(0, 760), true);
 	
 	static bool toggleWireframe = false;
 	
-	std::string filepath = "assets/battleship.obj";
+	std::string filepath("assets/battleship.obj");
 	tinyobj::ObjReaderConfig config;
 	config.mtl_search_path = "./";
 	
@@ -240,12 +240,16 @@ void show3dModelViewer(
 		//glBufferData(GL_ARRAY_BUFFER, sizeof(uvs)*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
 		
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << std::endl;
+			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
 		}else{
+			
+			int viewportHeight = 500;
+			int viewportWidth = 500;
+			
 			// draw to the offscreen frame buffer
 			// adjust the glviewport to be drawn to so the image comes out correctly
 			glBindFramebuffer(GL_FRAMEBUFFER, offscreenFrameBuf);
-			glViewport(0, 0, 500, 500);
+			glViewport(0, 0, viewportWidth, viewportHeight);
 			glClearColor(0.62f, 0.73f, 0.78f, 0.0f); // the color of the background
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			
@@ -278,12 +282,12 @@ void show3dModelViewer(
 			
 			// set up modelview matrix (and do all the necessary transformations)
 			// store y rotation and rotate based on last y rotation so the model will rotate 360
-			static glm::mat4 lastYRot = glm::mat4(1.0);
+			static glm::mat4 lastYRot(1.0);
 			lastYRot = glm::rotate(lastYRot, angleToRads(0.5f), glm::vec3(0,1,0));
 			
 			// the following should do: move model to origin, scale it, rotate about x, rotate about y, then move it to final position (i.e. further away from the camera along z)
 			// these operations here are ones we want to keep constant through each render, so we do them on the identity matrix (not using the previous object's transformation matrix)
-			glm::mat4 mvp = glm::mat4(1.0);
+			glm::mat4 mvp(1.0);
 			mvp = glm::translate(mvp, glm::vec3(cameraCurrX, cameraCurrY, cameraCurrZ));
 			mvp = mvp * lastYRot; // rotate about Y based on last rotation
 			mvp = glm::rotate(mvp, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
@@ -311,15 +315,13 @@ void show3dModelViewer(
 			
 			// grab the offscreen texture and draw it to an imgui image
 			glActiveTexture(GL_TEXTURE1);
-			int w = 500;
-			int h = 500;
-			int pixelDataLen = w*h*3;
+			int pixelDataLen = viewportWidth*viewportHeight*3;
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
 			
-			// TODO: center the image?
-			//ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 0));
-			ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(w, h));
+			// center the image
+			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
+			ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(viewportWidth, viewportHeight));
 			
 			delete pixelData;
 			
@@ -327,50 +329,29 @@ void show3dModelViewer(
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		}
 		
+		//ImGui::Indent(ImGui::GetWindowSize().x/2); TODO: can't seem to use 2 indents? :/
+		// I'd like to indent the button a different amount from the amount for the sliders
+		
+		ImGui::Indent(ImGui::GetWindowSize().x/3); // center the sliders
 		if(ImGui::Button("toggle wireframe")){
 			toggleWireframe = !toggleWireframe; 
 		}
 		
-		ImGui::Dummy(ImVec2(0.0f, 5.0f)); // add some vertical spacing
+		ImGui::PushItemWidth(ImGui::GetWindowSize().x/4); // make the sliders a bit smaller in length
+		
+		ImGui::Dummy(ImVec2(0.0f, 3.0f)); // add some vertical spacing
 		
 		// control camera x movement
-		ImGui::Text("move along X: ");
-		ImGui::SameLine();
-		if(ImGui::Button("+x")){
-			cameraCurrX += 0.5f;
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("-x")){
-			cameraCurrX -= 0.5f;
-		}
-		ImGui::SameLine();
-		ImGui::Text("%f", cameraCurrX);
+		ImGui::SliderFloat("move along x", &cameraCurrX, -5.0f, 5.0f);
+		ImGui::Dummy(ImVec2(0.0f, 3.0f));
 		
 		// control camera y movement
-		ImGui::Text("move along Y: ");
-		ImGui::SameLine();
-		if(ImGui::Button("+y")){
-			cameraCurrY += 0.5f;
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("-y")){
-			cameraCurrY -= 0.5f;
-		}
-		ImGui::SameLine();
-		ImGui::Text("%f", cameraCurrY);
+		ImGui::SliderFloat("move along y", &cameraCurrY, -5.0f, 5.0f);
+		ImGui::Dummy(ImVec2(0.0f, 3.0f));
 		
 		// control camera z movement
-		ImGui::Text("move along Z: ");
-		ImGui::SameLine();
-		if(ImGui::Button("+z")){
-			cameraCurrZ += 0.5f;
-		}
-		ImGui::SameLine();
-		if(ImGui::Button("-z")){
-			cameraCurrZ -= 0.5f;
-		}
-		ImGui::SameLine();
-		ImGui::Text("%f", cameraCurrZ);
+		ImGui::SliderFloat("move along z", &cameraCurrZ, -25.0f, 0.0f);
+		ImGui::Dummy(ImVec2(0.0f, 1.0f));
 	}
 	
 	ImGui::EndChild();

@@ -4,6 +4,9 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "stb_image_write.h"
+
 std::string trimString(std::string str){
 	std::string trimmed("");
 	std::string::iterator it;
@@ -26,10 +29,11 @@ int correctRGB(int channel){
 }
 
 // https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* width, int* height){
+bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* width, int* height, int* channels){
 	int imageWidth = 0;
 	int imageHeight = 0;
-	unsigned char* imageData = stbi_load(filename, &imageWidth, &imageHeight, NULL, 4);
+	int imageChannels = 4; //rgba
+	unsigned char* imageData = stbi_load(filename, &imageWidth, &imageHeight, &imageChannels, 4);
 	if(imageData == NULL){
 		return false;
 	}
@@ -69,6 +73,7 @@ bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* 
 	*originalImage = imageTexture2;
 	*width = imageWidth;
 	*height = imageHeight;
+	*channels = imageChannels;
 	
 	return true;
 }
@@ -81,11 +86,13 @@ void showImageEditor(){
 	static GLuint originalImage = 1;
 	static int imageHeight = 0;
 	static int imageWidth = 0;
+	static int imageChannels = 4; //rgba
 	static char importImageFilepath[64] = "assets/test_image.png";
 	
 	// for filters that have customizable parameters,
 	// have a bool flag so we can toggle the params
 	static bool showSaturateParams = false;
+	static bool showOutlineParams = false;
 	
 	bool importImageClicked = ImGui::Button("import image");
 	ImGui::SameLine();
@@ -98,7 +105,7 @@ void showImageEditor(){
 		std::string filepath(importImageFilepath);
 		
 		if(trimString(filepath) != ""){
-			bool loaded = importImage(filepath.c_str(), &texture, &originalImage, &imageWidth, &imageHeight);
+			bool loaded = importImage(filepath.c_str(), &texture, &originalImage, &imageWidth, &imageHeight, &imageChannels);
 			if(loaded){
 				showImage = true;
 			}else{
@@ -118,8 +125,8 @@ void showImageEditor(){
 		// make sure we use the right texture (since we also have one for rendering an offscreen frame buffer scene on)
 		glActiveTexture(GL_TEXTURE0);
 		
-		if (ImGui::Button("grayscale")){	
-			// grayscale the image data
+		// GRAYSCALE
+		if(ImGui::Button("grayscale")){
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
 			
@@ -127,7 +134,6 @@ void showImageEditor(){
 				unsigned char r = pixelData[i];
 				unsigned char g = pixelData[i+1];
 				unsigned char b = pixelData[i+2];
-				
 				unsigned char grey = (r+g+b)/3;
 				pixelData[i] = grey;
 				pixelData[i+1] = grey;
@@ -138,7 +144,8 @@ void showImageEditor(){
 		}
 		ImGui::SameLine();
 		
-		if (ImGui::Button("invert")){		
+		// INVERT
+		if(ImGui::Button("invert")){
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData); // uses currently bound texture from importImage()
 			for(int i = 0; i < pixelDataLen - 4; i+=4){
@@ -151,8 +158,29 @@ void showImageEditor(){
 		}
 		ImGui::SameLine();
 		
-		if (ImGui::Button("saturate")){
+		// SATURATION
+		if(ImGui::Button("saturate")){
 			showSaturateParams = !showSaturateParams;
+			showOutlineParams = false; // TODO: figure out better way to do this
+		}
+		ImGui::SameLine();
+		
+		// OUTLINE
+		if(ImGui::Button("outline")){
+			showOutlineParams = !showOutlineParams;
+			showSaturateParams = false;
+		}
+		ImGui::SameLine();
+		
+		// EXPORT IMAGE
+		if(ImGui::Button("export image (.bmp)")){
+			unsigned char* pixelData = new unsigned char[pixelDataLen];
+			glActiveTexture(GL_TEXTURE0);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			
+			// TODO: allow image naming
+			// TODO: hardcoding 4 channels b/c not sure we were getting the right channel value back for the imageChannels variable?
+			stbi_write_bmp("artstation_image_export.bmp", imageWidth, imageHeight, 4, (void *)pixelData);
 		}
 		
 		if(showSaturateParams){
@@ -163,7 +191,8 @@ void showImageEditor(){
 			
 			unsigned char* pixelData = new unsigned char[pixelDataLen];
 			
-			// use the original texture to get pixel data from
+			// use another texture to get pixel data (notice GL_TEXTURE2 instead of GL_TEXTURE0)
+			// so that we don't clobber the same image texture with repeated operations (we always want to work on a fresh copy)
 			glActiveTexture(GL_TEXTURE2);
 			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
 			
@@ -203,6 +232,87 @@ void showImageEditor(){
 			ImGui::SliderFloat("lumR", &lumR, 0.0f, 5.0f);
 			ImGui::SliderFloat("lumG", &lumG, 0.0f, 5.0f);
 			ImGui::SliderFloat("lumB", &lumB, 0.0f, 5.0f);
+		}
+		
+		if(showOutlineParams){
+			unsigned char* pixelData = new unsigned char[pixelDataLen];
+			unsigned char* sourceImageCopy = new unsigned char[pixelDataLen];
+			
+			// use the original texture to get pixel data from
+			glActiveTexture(GL_TEXTURE2);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			glGetTexImage(GL_TEXTURE_2D, 0, GL_RGBA, GL_UNSIGNED_BYTE, sourceImageCopy);
+			
+			// for each pixel, check the above pixel (if it exists)
+			// if the above pixel is 'significantly' different (i.e. more than +/- 5 of rgb),
+			// color the above pixel black and the current pixel white. otherwise, both become white. 
+			static int limit = 10;
+			
+			bool setSameColor = false;
+			
+			for(int i = 0; i < imageHeight; i++){
+				for(int j = 0; j < imageWidth; j++){
+					// the current pixel is i*width + j
+					// the above pixel is (i-1)*width + j
+					if(i > 0){
+						int aboveIndexR = (i-1)*imageWidth*4 + j*4;
+						int aboveIndexG = (i-1)*imageWidth*4 + j*4 + 1;
+						int aboveIndexB = (i-1)*imageWidth*4 + j*4 + 2;
+						
+						int currIndexR = i*imageWidth*4 + j*4;
+						int currIndexG = i*imageWidth*4 + j*4 + 1;
+						int currIndexB = i*imageWidth*4 + j*4 + 2;
+						
+						uint8_t aboveR = sourceImageCopy[aboveIndexR];
+						uint8_t aboveG = sourceImageCopy[aboveIndexG];
+						uint8_t aboveB = sourceImageCopy[aboveIndexB];
+					
+						uint8_t currR = sourceImageCopy[currIndexR]; 
+						uint8_t currG = sourceImageCopy[currIndexG];
+						uint8_t currB = sourceImageCopy[currIndexB];
+						
+						if(aboveR - currR < limit && aboveR - currR > -limit){
+							if(aboveG - currG < limit && aboveG - currG > -limit){
+								if(aboveB - currB < limit && aboveB - currB > -limit){
+									setSameColor = true;
+								}else{
+									setSameColor = false;
+								}
+							}else{
+								setSameColor = false;
+							}
+						}else{
+							setSameColor = false;
+						}
+						
+						if(!setSameColor){
+							pixelData[aboveIndexR] = 0;
+							pixelData[aboveIndexG] = 0;
+							pixelData[aboveIndexB] = 0;
+							
+							pixelData[currIndexR] = 255; 
+							pixelData[currIndexG] = 255; 
+							pixelData[currIndexB] = 255; 
+						}else{
+							pixelData[aboveIndexR] = 255;
+							pixelData[aboveIndexG] = 255;
+							pixelData[aboveIndexB] = 255;
+							
+							pixelData[currIndexR] = 255; 
+							pixelData[currIndexG] = 255; 
+							pixelData[currIndexB] = 255; 
+						}
+					}
+				}
+			}
+			
+			// after editing pixel data, write it to the other texture
+			glActiveTexture(GL_TEXTURE0);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imageWidth, imageHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixelData);
+			delete pixelData;
+			delete sourceImageCopy;
+			
+			ImGui::SliderInt("color difference limit", &limit, 1, 20);
 		}
 	}
 	
