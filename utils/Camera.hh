@@ -5,13 +5,19 @@
 #include <GLM/glm.hpp>
 #include <GLM/vec3.hpp>
 
+#define M_PI 3.14159265358979323846
+
 // helpful! https://computergraphics.stackexchange.com/questions/151/how-to-implement-a-trackball-in-opengl
 
 class Camera {
     public:
-        // random note: prefer initialization lists
-        // https://stackoverflow.com/questions/6822422/c-where-to-initialize-variables-in-constructor
-        Camera() : theta(0.0f), phi(0.0f), radius(10.0f), up(1.0f), targetPos{0, 0, 0} {}
+        float theta;
+        float phi;
+        float radius;
+        float up;
+        glm::vec3 targetPos;
+    
+        Camera();
         
         void rotate(float deltaTheta, float deltaPhi);
         void pan(float deltaX, float deltaY);
@@ -21,13 +27,7 @@ class Camera {
         
         ~Camera();
         
-    private:
-        float theta;
-        float phi;
-        float radius;
-        float up;
-        glm::vec3 targetPos;
-        
+    private:        
         glm::vec3 toCartesian();
 };
 

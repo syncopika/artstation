@@ -23,7 +23,7 @@ void showDrawingCanvas(){
 	
 	//static ImVec2 scrolling(0.0f, 0.0f);
 	
-	ImGui::BeginChild("drawing canvas", ImVec2(0, 0), true);
+	//ImGui::BeginChild("drawing canvas", ImVec2(0, 0), true);
 	ImGui::Columns(2, "stuff");
 	
 	ImVec2 canvasPos0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
@@ -120,5 +120,5 @@ void showDrawingCanvas(){
 	
 	ImGui::Columns();
 	
-	ImGui::EndChild();
+	//ImGui::EndChild();
 }

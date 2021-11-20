@@ -48,7 +48,7 @@ OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 EXE = artstation
 
 # build utils
-%.o:$(UTILS_DIR)/%.cpp
+%.o:$(UTILS_DIR)/%.cpp $(UTILS_DIR)/%.hh
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
     
 # build apps

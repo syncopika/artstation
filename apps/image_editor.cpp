@@ -79,7 +79,7 @@ bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* 
 }
 
 void showImageEditor(){
-	ImGui::BeginChild("image editor", ImVec2(0, 800), true);
+	//ImGui::BeginChild("image editor", ImVec2(0, 800), true);
 	
 	static bool showImage = false;
 	static GLuint texture = 0;
@@ -316,5 +316,5 @@ void showImageEditor(){
 		}
 	}
 	
-	ImGui::EndChild();
+	//ImGui::EndChild();
 }

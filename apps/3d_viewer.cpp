@@ -3,6 +3,9 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+#define WIDTH 500
+#define HEIGHT 500
+
 float angleToRads(float angleInDeg){
 	float pi = 3.14159;
 	return (pi / 180) * angleInDeg;
@@ -195,7 +198,7 @@ void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
 	glActiveTexture(GL_TEXTURE1);
 	glGenTextures(1, texture);
 	glBindTexture(GL_TEXTURE_2D, *texture); // any gl texture operations now will use this texture
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, 500, 500, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);  
 	glBindTexture(GL_TEXTURE_2D, 0); // unbind the texture
@@ -207,7 +210,7 @@ void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
 	GLuint depth;
 	glGenRenderbuffers(1, &depth);
 	glBindRenderbuffer(GL_RENDERBUFFER, depth);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, 500, 500);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, WIDTH, HEIGHT);
 	glBindRenderbuffer(GL_RENDERBUFFER, 0); // unbind after allocating storage
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
 	
@@ -227,10 +230,7 @@ void show3dModelViewer(
 	GLuint uvBuffer,
 	GLuint matrixId,
 	std::chrono::time_point<std::chrono::high_resolution_clock> startTime
-	){
-		
-	ImGui::BeginChild("3d model viewer", ImVec2(0, 760), true);
-	
+	){	
 	static bool toggleWireframe = false;
 	
 	std::string filepath("assets/battleship.obj");
@@ -250,9 +250,10 @@ void show3dModelViewer(
 		}
 		
 		// set up some static variables to let user control camera
-		static float cameraCurrX = 0.0f;
-		static float cameraCurrY = 0.0f;
-		static float cameraCurrZ = -15.0f;
+        static Camera cam;
+		static float modelPosX = 0.0f;
+		static float modelPosY = 0.0f;
+		static float modelPosZ = -8.0f;
 		
 		auto& attrib = reader.GetAttrib();
 		auto& shapes = reader.GetShapes();
@@ -276,8 +277,8 @@ void show3dModelViewer(
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
 		}else{
-			int viewportHeight = 500;
-			int viewportWidth = 500;
+			int viewportHeight = HEIGHT;
+			int viewportWidth = WIDTH;
 			
 			// draw to the offscreen frame buffer
 			// adjust the glviewport to be drawn to so the image comes out correctly
@@ -306,40 +307,28 @@ void show3dModelViewer(
 			GLuint t = glGetUniformLocation(shaderProgram, "time");
 			glUniform1f(t, time);
             
-            
             // handle any input for trackball
-            /*
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)){
-                std::cout << "canvas pos 0 = x: " << canvasPos0.x << ", y: " << canvasPos0.y << '\n'; 
-                std::cout << "new mouse pos = " << "x: " << io.MousePos.x << ", y: " << io.MousePos.y << '\n';
-            }*/
-            Camera cam;
             ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
             if(std::abs(dragDelta.x) > 0 || std::abs(dragDelta.y) > 0){
-                std::cout << "x: " << dragDelta.x << ", y: " << dragDelta.y << '\n';
+                //std::cout << "x: " << dragDelta.x << ", y: " << dragDelta.y << '\n';
+                cam.rotate(-dragDelta.x/800, dragDelta.y/800);
             }
             
             if(io.MouseWheel != 0.0f){
-                std::cout << "mouse delta: " << io.MouseWheel << '\n';
-                
-                glm::vec3 camPos = cam.getCameraPos();
-                std::cout << "camera pos: " << "x: " << camPos.x << ", y: " << camPos.y << ", z: " << camPos.z << '\n';
-                
-                //glm::mat4 viewMat = lookAt(cam.getCameraPos(), glm::vec3{0,0,0}); // we're assuming the target to look at is at the origin
-                //std::cout << viewMat[0][0] << ", " << viewMat[0][1] << ", " << viewMat[0][2] << ", " << viewMat[0][3] << '\n';
-                //std::cout << viewMat[1][0] << ", " << viewMat[1][1] << ", " << viewMat[1][2] << ", " << viewMat[1][3] << '\n';
-                //std::cout << viewMat[2][0] << ", " << viewMat[2][1] << ", " << viewMat[2][2] << ", " << viewMat[2][3] << '\n';
-                //std::cout << viewMat[3][0] << ", " << viewMat[3][1] << ", " << viewMat[3][2] << ", " << viewMat[3][3] << '\n';
-            } 
+                if(io.MouseWheel < 0){
+                    cam.zoom(1.0f);
+                }else{
+                    cam.zoom(-1.0f);
+                }
+            }
 			
 			// set up project matrix
 			float fovAngle = 60.0f;
-			float aspect = 1.0f; // 500 x 500 screen
+			float aspect = WIDTH / HEIGHT;
 			float near = 0.01f;
 			float far = 100.0f;
 			glm::mat4 perspectiveMat = createPerspectiveMatrix(fovAngle, aspect, near, far);
 			
-			// set up modelview matrix (and do all the necessary transformations)
 			// store y rotation and rotate based on last y rotation so the model will rotate 360
 			static glm::mat4 lastYRot(1.0);
 			lastYRot = glm::rotate(lastYRot, angleToRads(0.5f), glm::vec3(0,1,0));
@@ -347,23 +336,15 @@ void show3dModelViewer(
 			// the following should do: move model to origin, scale it, rotate about x, rotate about y, then move it to final position (i.e. further away from the camera along z)
 			// these operations here are ones we want to keep constant through each render, so we do them on the identity matrix (not using the previous object's transformation matrix)
 			glm::mat4 model(1.0);
-			model = glm::translate(model, glm::vec3(cameraCurrX, cameraCurrY, cameraCurrZ));
+			model = glm::translate(model, glm::vec3(modelPosX, modelPosY, modelPosZ)); // final position of model
 			model = model * lastYRot; // rotate about Y based on last rotation
 			model = glm::rotate(model, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
 			model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
 			model = glm::translate(model, glm::vec3(0, 0, 0)); // place at center (0,0,0)
 			
-			// multiply perspectiveMat and modelview to get the final view
-            //glm::mat4 viewMat(1); // we're assuming the target to look at is at the origin
-            glm::mat4 viewMat = lookAt(cam.getCameraPos(), glm::vec3(cameraCurrX, cameraCurrY, cameraCurrZ));
+			// multiply perspectiveMat view and model matrices to get the final view
+            glm::mat4 viewMat = glm::lookAt(cam.getCameraPos(), glm::vec3(modelPosX, modelPosY, modelPosZ), glm::vec3(0, cam.up, 0));
 			glm::mat4 mvp = perspectiveMat * viewMat * model;
-            
-            if(io.MouseWheel != 0.0f){
-                std::cout << mvp[0][0] << ", " << mvp[0][1] << ", " << mvp[0][2] << ", " << mvp[0][3] << '\n';
-                std::cout << mvp[1][0] << ", " << mvp[1][1] << ", " << mvp[1][2] << ", " << mvp[1][3] << '\n';
-                std::cout << mvp[2][0] << ", " << mvp[2][1] << ", " << mvp[2][2] << ", " << mvp[2][3] << '\n';
-                std::cout << mvp[3][0] << ", " << mvp[3][1] << ", " << mvp[3][2] << ", " << mvp[3][3] << '\n';
-            }
 			
 			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
 			
@@ -395,33 +376,13 @@ void show3dModelViewer(
 			
 			// unbind offscreenFrameBuf and use default framebuffer again (show the gui window) - I think that's how this works?
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            
 		}
 		
-		//ImGui::Indent(ImGui::GetWindowSize().x/2); TODO: can't seem to use 2 indents? :/
-		// I'd like to indent the button a different amount from the amount for the sliders
-		
-		ImGui::Indent(ImGui::GetWindowSize().x/3); // center the sliders
+		ImGui::Indent(ImGui::GetWindowSize().x/2 - 30); // attempt to center the button
 		if(ImGui::Button("toggle wireframe")){
 			toggleWireframe = !toggleWireframe; 
 		}
 		
-		ImGui::PushItemWidth(ImGui::GetWindowSize().x/4); // make the sliders a bit smaller in length
-		
-		ImGui::Dummy(ImVec2(0.0f, 3.0f)); // add some vertical spacing
-		
-		// control camera x movement
-		ImGui::SliderFloat("move along x", &cameraCurrX, -5.0f, 5.0f);
-		ImGui::Dummy(ImVec2(0.0f, 3.0f));
-		
-		// control camera y movement
-		ImGui::SliderFloat("move along y", &cameraCurrY, -5.0f, 5.0f);
-		ImGui::Dummy(ImVec2(0.0f, 3.0f));
-		
-		// control camera z movement
-		ImGui::SliderFloat("move along z", &cameraCurrZ, -25.0f, 0.0f);
-		ImGui::Dummy(ImVec2(0.0f, 1.0f));
 	}
-	
-	ImGui::EndChild();
+
 }

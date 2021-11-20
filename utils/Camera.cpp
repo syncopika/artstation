@@ -1,8 +1,34 @@
 #include "Camera.hh"
 
+// random note: prefer initialization lists
+// https://stackoverflow.com/questions/6822422/c-where-to-initialize-variables-in-constructor
+// theta and phi are 1.0 because that allows the object to appear initially
+// if they're set to 0.0, you have to click and drag first to get the object to show. not sure why atm.
+Camera::Camera() : theta(1.0f), phi(1.0f), radius(3.0f), up(1.0f), targetPos{0, 0, -8} {}
+
 void Camera::rotate(float deltaTheta, float deltaPhi){
-    theta += deltaTheta;
+    if(up > 0.0f){
+        theta += deltaTheta;
+    }else{
+        theta -= deltaTheta;
+    }
+    
     phi += deltaPhi;
+    
+    // keep phi within -2PI to 2PI
+    if(phi > 2*M_PI){
+        phi -= 2*M_PI;
+    }else if(phi < -2*M_PI){
+        phi += 2*M_PI;
+    }
+    
+    // if (0 < phi < PI) or (-PI < phi < -2PI), 'up' should be positive Y,
+    // otherwise, negative Y
+    if((phi > 0.0f && phi < M_PI) || (phi > -M_PI && phi < -2*M_PI)){
+        up = 1.0f;
+    }else{
+        up = -1.0f;
+    }
 }
 
 void Camera::pan(float deltaX, float deltaY){

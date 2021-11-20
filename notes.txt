@@ -38,10 +38,12 @@ https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-s
 https://www.3dgep.com/understanding-the-view-matrix/
 https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function
 https://computergraphics.stackexchange.com/questions/151/how-to-implement-a-trackball-in-opengl
+http://www.songho.ca/opengl/gl_camera.html
 
 TODO:
 - move 3d stuff to a separate file? (need to separate utility functions?)
 - image export for image editor for png, jpg? also be able to name the exported image!
 - move image filter code to separate file?
 - be able to import .obj files, also include textures
-  - maybe trackball feature? :O
+- kinda have trackball working! have some minor things like inverted scroll/zoom to maybe fix 
+  and also need to get panning working (maybe?)

@@ -188,7 +188,7 @@ int main(int, char**)
 		
 		ImGui::SetNextWindowSize(ImVec2(currSDLWidth, currSDLHeight*0.98f));
 		ImGui::SetNextWindowPos(ImVec2(0, 18));
-		ImGui::Begin("App", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
+		ImGui::Begin("App", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_HorizontalScrollbar);
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         //if (show_demo_window)
