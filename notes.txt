@@ -45,5 +45,4 @@ TODO:
 - image export for image editor for png, jpg? also be able to name the exported image!
 - move image filter code to separate file?
 - be able to import .obj files, also include textures
-- kinda have trackball working! have some minor things like inverted scroll/zoom to maybe fix 
-  and also need to get panning working (maybe?)
+- kinda have trackball working! need to get panning working (maybe?)

@@ -22,9 +22,9 @@ void Camera::rotate(float deltaTheta, float deltaPhi){
         phi += 2*M_PI;
     }
     
-    // if (0 < phi < PI) or (-PI < phi < -2PI), 'up' should be positive Y,
+    // if (0 < phi < PI), 'up' should be positive Y,
     // otherwise, negative Y
-    if((phi > 0.0f && phi < M_PI) || (phi > -M_PI && phi < -2*M_PI)){
+    if(phi > 0.0f && phi < M_PI){
         up = 1.0f;
     }else{
         up = -1.0f;

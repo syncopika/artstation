@@ -311,14 +311,15 @@ void show3dModelViewer(
             ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
             if(std::abs(dragDelta.x) > 0 || std::abs(dragDelta.y) > 0){
                 //std::cout << "x: " << dragDelta.x << ", y: " << dragDelta.y << '\n';
-                cam.rotate(-dragDelta.x/800, dragDelta.y/800);
+                cam.rotate(-dragDelta.x/800, dragDelta.y/800); // moving mouse up is a negative delta y
             }
             
             if(io.MouseWheel != 0.0f){
                 if(io.MouseWheel < 0){
-                    cam.zoom(1.0f);
-                }else{
+                    // scroll backwards, zoom out
                     cam.zoom(-1.0f);
+                }else{
+                    cam.zoom(1.0f);
                 }
             }
 			
