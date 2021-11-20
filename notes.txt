@@ -35,7 +35,9 @@ https://stackoverflow.com/questions/3498581/in-opengl-what-is-the-simplest-way-t
 
 misc stuff ===================================================
 https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-stb_image-libraries/
-
+https://www.3dgep.com/understanding-the-view-matrix/
+https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function
+https://computergraphics.stackexchange.com/questions/151/how-to-implement-a-trackball-in-opengl
 
 TODO:
 - move 3d stuff to a separate file? (need to separate utility functions?)

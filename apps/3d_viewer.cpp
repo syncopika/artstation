@@ -24,6 +24,37 @@ glm::mat4 createPerspectiveMatrix(float fovAngle, float aspect, float near, floa
 	return m;
 }
 
+// https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function
+glm::mat4 lookAt(const glm::vec3& from, const glm::vec3& to, const glm::vec3& tmp = glm::vec3(0, 1, 0)){
+    glm::vec3 forward = glm::normalize(from - to);
+    glm::vec3 right = glm::cross(glm::normalize(tmp), forward);
+    glm::vec3 up = glm::cross(forward, right);
+    
+    glm::mat4 camToWorld;
+    
+    camToWorld[0][0] = right.x;
+    camToWorld[0][1] = right.y;
+    camToWorld[0][2] = right.z;
+    camToWorld[0][3] = 0;
+    
+    camToWorld[1][0] = up.x;
+    camToWorld[1][1] = up.y;
+    camToWorld[1][2] = up.z;
+    camToWorld[1][3] = 0;
+    
+    camToWorld[2][0] = forward.x;
+    camToWorld[2][1] = forward.y;
+    camToWorld[2][2] = forward.z;
+    camToWorld[2][3] = 0;
+    
+    camToWorld[3][0] = from.x;
+    camToWorld[3][1] = from.y;
+    camToWorld[3][2] = from.z;
+    camToWorld[3][3] = 1;
+    
+    return camToWorld;
+}
+
 // https://github.com/tinyobjloader/tinyobjloader
 void getObjModelInfo(
 	auto& shapes, 
@@ -238,11 +269,13 @@ void show3dModelViewer(
 		// uvs
 		//glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
 		//glBufferData(GL_ARRAY_BUFFER, sizeof(uvs)*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+        
+        //ImVec2 canvasPos0 = ImGui::GetCursorScreenPos(); 
+        ImGuiIO& io = ImGui::GetIO();
 		
 		if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
 			std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
 		}else{
-			
 			int viewportHeight = 500;
 			int viewportWidth = 500;
 			
@@ -272,6 +305,32 @@ void show3dModelViewer(
 			float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
 			GLuint t = glGetUniformLocation(shaderProgram, "time");
 			glUniform1f(t, time);
+            
+            
+            // handle any input for trackball
+            /*
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)){
+                std::cout << "canvas pos 0 = x: " << canvasPos0.x << ", y: " << canvasPos0.y << '\n'; 
+                std::cout << "new mouse pos = " << "x: " << io.MousePos.x << ", y: " << io.MousePos.y << '\n';
+            }*/
+            Camera cam;
+            ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+            if(std::abs(dragDelta.x) > 0 || std::abs(dragDelta.y) > 0){
+                std::cout << "x: " << dragDelta.x << ", y: " << dragDelta.y << '\n';
+            }
+            
+            if(io.MouseWheel != 0.0f){
+                std::cout << "mouse delta: " << io.MouseWheel << '\n';
+                
+                glm::vec3 camPos = cam.getCameraPos();
+                std::cout << "camera pos: " << "x: " << camPos.x << ", y: " << camPos.y << ", z: " << camPos.z << '\n';
+                
+                //glm::mat4 viewMat = lookAt(cam.getCameraPos(), glm::vec3{0,0,0}); // we're assuming the target to look at is at the origin
+                //std::cout << viewMat[0][0] << ", " << viewMat[0][1] << ", " << viewMat[0][2] << ", " << viewMat[0][3] << '\n';
+                //std::cout << viewMat[1][0] << ", " << viewMat[1][1] << ", " << viewMat[1][2] << ", " << viewMat[1][3] << '\n';
+                //std::cout << viewMat[2][0] << ", " << viewMat[2][1] << ", " << viewMat[2][2] << ", " << viewMat[2][3] << '\n';
+                //std::cout << viewMat[3][0] << ", " << viewMat[3][1] << ", " << viewMat[3][2] << ", " << viewMat[3][3] << '\n';
+            } 
 			
 			// set up project matrix
 			float fovAngle = 60.0f;
@@ -287,17 +346,26 @@ void show3dModelViewer(
 			
 			// the following should do: move model to origin, scale it, rotate about x, rotate about y, then move it to final position (i.e. further away from the camera along z)
 			// these operations here are ones we want to keep constant through each render, so we do them on the identity matrix (not using the previous object's transformation matrix)
-			glm::mat4 mvp(1.0);
-			mvp = glm::translate(mvp, glm::vec3(cameraCurrX, cameraCurrY, cameraCurrZ));
-			mvp = mvp * lastYRot; // rotate about Y based on last rotation
-			mvp = glm::rotate(mvp, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
-			mvp = glm::scale(mvp, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
-			mvp = glm::translate(mvp, glm::vec3(0, 0, 0)); // place at center (0,0,0)
+			glm::mat4 model(1.0);
+			model = glm::translate(model, glm::vec3(cameraCurrX, cameraCurrY, cameraCurrZ));
+			model = model * lastYRot; // rotate about Y based on last rotation
+			model = glm::rotate(model, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
+			model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
+			model = glm::translate(model, glm::vec3(0, 0, 0)); // place at center (0,0,0)
 			
 			// multiply perspectiveMat and modelview to get the final view
-			perspectiveMat = perspectiveMat * mvp;
+            //glm::mat4 viewMat(1); // we're assuming the target to look at is at the origin
+            glm::mat4 viewMat = lookAt(cam.getCameraPos(), glm::vec3(cameraCurrX, cameraCurrY, cameraCurrZ));
+			glm::mat4 mvp = perspectiveMat * viewMat * model;
+            
+            if(io.MouseWheel != 0.0f){
+                std::cout << mvp[0][0] << ", " << mvp[0][1] << ", " << mvp[0][2] << ", " << mvp[0][3] << '\n';
+                std::cout << mvp[1][0] << ", " << mvp[1][1] << ", " << mvp[1][2] << ", " << mvp[1][3] << '\n';
+                std::cout << mvp[2][0] << ", " << mvp[2][1] << ", " << mvp[2][2] << ", " << mvp[2][3] << '\n';
+                std::cout << mvp[3][0] << ", " << mvp[3][1] << ", " << mvp[3][2] << ", " << mvp[3][3] << '\n';
+            }
 			
-			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &perspectiveMat[0][0]);
+			glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
 			
 			// set up attributes to vertex buffer
 			glEnableVertexAttribArray(0);
@@ -323,10 +391,11 @@ void show3dModelViewer(
 			ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
 			ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(viewportWidth, viewportHeight));
 			
-			delete pixelData;
+			delete[] pixelData;
 			
 			// unbind offscreenFrameBuf and use default framebuffer again (show the gui window) - I think that's how this works?
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            
 		}
 		
 		//ImGui::Indent(ImGui::GetWindowSize().x/2); TODO: can't seem to use 2 indents? :/

@@ -2,6 +2,7 @@
 #ifndef THREE_D_VIEWER_FUNCS
 #define THREE_D_VIEWER_FUNCS
 
+#include "../utils/Camera.hh"
 #include "imgui.h"
 
 #include <chrono>
@@ -17,6 +18,7 @@
 float angleToRads(float angleInDeg);
 
 glm::mat4 createPerspectiveMatrix(float fovAngle, float aspect, float near, float far);
+glm::mat4 lookAt(const glm::vec3& from, const glm::vec3& to, const glm::vec3& tmp);
 
 void getObjModelInfo(
 	auto& shapes, 
