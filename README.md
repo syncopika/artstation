@@ -2,15 +2,16 @@
 just trying out Dear ImGUI and OpenGL for a bunch of small apps like a drawing canvas, image editor, and more!    
     
 drawing canvas:    
-![current look](screenshots/drawingcanvas.png)
+![current look](screenshots/drawingcanvas.png)    
 has adjustable brush width    
 	
 image editor:   
 ![image editor](screenshots/image_editor.png)    
-has some filters and an export image (as .bmp only currently) function
+has some filters and export image functionality (as .bmp only though currently)    
     
 3d model viewer:    
 ![3d model viewer](screenshots/modelviewer.png)    
+has a trackball feature! just click and drag to rotate around the object (and zoom in/out with the mouse clickwheel)    
     
 app option menu:    
 ![app options](screenshots/options.png)    
@@ -21,6 +22,7 @@ app option menu:
 - [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h) and [stb_image_write.h](https://github.com/nothings/stb/blob/master/stb_image_write.h)   
 - [tiny_object_loader.h](https://github.com/tinyobjloader/tinyobjloader)
 - [GLEW](http://glew.sourceforge.net/install.html) for OpenGL    
+- [GLM](https://github.com/g-truc/glm)    
     
 ## installation:    
 I'm using MinGW and MSYS for running `make` in a Windows 10 environment.    

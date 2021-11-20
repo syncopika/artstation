@@ -2,6 +2,7 @@
 #ifndef THREE_D_VIEWER_FUNCS
 #define THREE_D_VIEWER_FUNCS
 
+#include "../utils/Camera.hh"
 #include "imgui.h"
 
 #include <chrono>
@@ -17,13 +18,14 @@
 float angleToRads(float angleInDeg);
 
 glm::mat4 createPerspectiveMatrix(float fovAngle, float aspect, float near, float far);
+glm::mat4 lookAt(const glm::vec3& from, const glm::vec3& to, const glm::vec3& tmp);
 
 void getObjModelInfo(
-	auto& shapes, 
-	auto& attrib, 
-	std::vector<glm::vec3>& vertices,
-	std::vector<glm::vec2>& uvs,
-	std::vector<glm::vec3>& normals
+    auto& shapes, 
+    auto& attrib, 
+    std::vector<glm::vec3>& vertices,
+    std::vector<glm::vec2>& uvs,
+    std::vector<glm::vec3>& normals
 );
 
 void setupShaders(GLuint& shaderProgram);
@@ -31,14 +33,14 @@ void setupShaders(GLuint& shaderProgram);
 void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture);
 
 void show3dModelViewer(
-	GLuint offscreenFrameBuf, 
-	GLuint offscreenTexture, 
-	GLuint shaderProgram,
-	GLuint vbo,
-	GLuint vao,
-	GLuint uvBuffer,
-	GLuint matrixId,
-	std::chrono::time_point<std::chrono::high_resolution_clock> startTime
+    GLuint offscreenFrameBuf, 
+    GLuint offscreenTexture, 
+    GLuint shaderProgram,
+    GLuint vbo,
+    GLuint vao,
+    GLuint uvBuffer,
+    GLuint matrixId,
+    std::chrono::time_point<std::chrono::high_resolution_clock> startTime
 );
 
 

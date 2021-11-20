@@ -19,12 +19,16 @@ GLM_INCLUDE = C:\libraries\glm
 # the apps, e.g. drawing canvas, 3d viewer, etc.
 APPS_DIR = apps
 
+# utilities
+UTILS_DIR = utils
+
 # other dependencies like stb_img, tiny_obj_loader
 OTHER_LIBS_DIR = external
 
 IMGUI_DIR = imgui
 SOURCES = artstation.cpp
 SOURCES += $(APPS_DIR)/image_editor.cpp $(APPS_DIR)/drawing_canvas.cpp  $(APPS_DIR)/3d_viewer.cpp
+SOURCES += $(UTILS_DIR)/Camera.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 
 # specific to our backend (sdl + opengl)
@@ -35,16 +39,20 @@ CXXFLAGS = -Wall -Wformat -std=c++14 -I$(SDL_INCLUDE) -I$(IMGUI_DIR) -I$(OPENGL_
 
 GLEW_LIBS = -lglew32 -lglu32
 
-# add '-mwindows' to LIBS to prevent an additional comand line terminal from appearing (but it's useful for debugging)
-LIBS = -mwindows -lmingw32 -lgdi32 $(GLEW_LIBS) -lopengl32 -limm32 -static-libstdc++ -static-libgcc -L$(SDL_LIB)
+# add '-mwindows' to LIBS to prevent an additional command line terminal from appearing (but it's useful for debugging)
+LIBS = -lmingw32 -lgdi32 $(GLEW_LIBS) -lopengl32 -limm32 -static-libstdc++ -static-libgcc -L$(SDL_LIB)
 
 # object files needed
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 EXE = artstation
 
+# build utils
+%.o:$(UTILS_DIR)/%.cpp $(UTILS_DIR)/%.hh
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+    
 # build apps
-%.o:apps/%.cpp
+%.o:$(APPS_DIR)/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 # build main

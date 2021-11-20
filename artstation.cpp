@@ -61,9 +61,9 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-	
-	const int sdlWidth = 1280;
-	const int sdlHeight = 720;
+    
+    const int sdlWidth = 1280;
+    const int sdlHeight = 720;
     SDL_Window* window = SDL_CreateWindow("ArtStation", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, sdlWidth, sdlHeight, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
@@ -101,43 +101,43 @@ int main(int, char**)
 
     // Our state
     //bool show_demo_window = true;
-	bool showCanvasForDrawingFlag = true;
-	bool showImageEditorFlag = false;
-	bool show3dModelViewerFlag = false;
+    bool showCanvasForDrawingFlag = true;
+    bool showImageEditorFlag = false;
+    bool show3dModelViewerFlag = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-	
-	// set up GLEW
-	GLenum err = glewInit();
-	if(GLEW_OK != err){
-		std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
-	}
-	
-	// set up buffers for 3d objects
-	GLuint vbo;
-	glGenBuffers(1, &vbo);
-	
-	GLuint vao;
-	glGenVertexArrays(1, &vao);
-	glBindVertexArray(vao);
-	
-	GLuint uvBuffer;
-	glGenBuffers(1, &uvBuffer);
-	
-	GLuint shaderProgram;
-	setupShaders(shaderProgram);
-	
-	// set up uniform attribute for passing in a matrix
-	// this will allow us to transform the object
-	GLuint matrixId = glGetUniformLocation(shaderProgram, "mvp");
-	
-	// set up for rendering scene to frame buffer -> texture -> use texture as image to render in the GUI
-	GLuint offscreenFrameBuf;
-	GLuint offscreenTexture;
-	setupOffscreenFramebuffer(&offscreenFrameBuf, &offscreenTexture);
-	
-	// for fun shaders
-	std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
-	
+    
+    // set up GLEW
+    GLenum err = glewInit();
+    if(GLEW_OK != err){
+        std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
+    }
+    
+    // set up buffers for 3d objects
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+    
+    GLuint uvBuffer;
+    glGenBuffers(1, &uvBuffer);
+    
+    GLuint shaderProgram;
+    setupShaders(shaderProgram);
+    
+    // set up uniform attribute for passing in a matrix
+    // this will allow us to transform the object
+    GLuint matrixId = glGetUniformLocation(shaderProgram, "mvp");
+    
+    // set up for rendering scene to frame buffer -> texture -> use texture as image to render in the GUI
+    GLuint offscreenFrameBuf;
+    GLuint offscreenTexture;
+    setupOffscreenFramebuffer(&offscreenFrameBuf, &offscreenTexture);
+    
+    // for fun shaders
+    std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
+    
     // Main loop
     bool done = false;
     while(!done){
@@ -159,66 +159,66 @@ int main(int, char**)
         ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplSDL2_NewFrame();
         ImGui::NewFrame();
-		
-		int currSDLWidth;
-		int currSDLHeight;
-		SDL_GetWindowSize(window, &currSDLWidth, &currSDLHeight);
-		
-		if(ImGui::BeginMainMenuBar()){
-			if(ImGui::BeginMenu("Apps")){
-				if(ImGui::MenuItem("drawing canvas", NULL, &showCanvasForDrawingFlag)){
-					showImageEditorFlag = false;
-					show3dModelViewerFlag = false;
-				}
-				
-				if(ImGui::MenuItem("image editor", NULL, &showImageEditorFlag)){
-					showCanvasForDrawingFlag = false;
-					show3dModelViewerFlag = false;
-				}
-				
-				if(ImGui::MenuItem("3d model viewer", NULL, &show3dModelViewerFlag)){
-					showCanvasForDrawingFlag = false;
-					showImageEditorFlag = false;
-				}
-				
-				ImGui::EndMenu();
-			}
-			ImGui::EndMainMenuBar();
-		}
-		
-		ImGui::SetNextWindowSize(ImVec2(currSDLWidth, currSDLHeight*0.98f));
-		ImGui::SetNextWindowPos(ImVec2(0, 18));
-		ImGui::Begin("App", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar);
+        
+        int currSDLWidth;
+        int currSDLHeight;
+        SDL_GetWindowSize(window, &currSDLWidth, &currSDLHeight);
+        
+        if(ImGui::BeginMainMenuBar()){
+            if(ImGui::BeginMenu("Apps")){
+                if(ImGui::MenuItem("drawing canvas", NULL, &showCanvasForDrawingFlag)){
+                    showImageEditorFlag = false;
+                    show3dModelViewerFlag = false;
+                }
+                
+                if(ImGui::MenuItem("image editor", NULL, &showImageEditorFlag)){
+                    showCanvasForDrawingFlag = false;
+                    show3dModelViewerFlag = false;
+                }
+                
+                if(ImGui::MenuItem("3d model viewer", NULL, &show3dModelViewerFlag)){
+                    showCanvasForDrawingFlag = false;
+                    showImageEditorFlag = false;
+                }
+                
+                ImGui::EndMenu();
+            }
+            ImGui::EndMainMenuBar();
+        }
+        
+        ImGui::SetNextWindowSize(ImVec2(currSDLWidth, currSDLHeight*0.98f));
+        ImGui::SetNextWindowPos(ImVec2(0, 18));
+        ImGui::Begin("App", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_HorizontalScrollbar);
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         //if (show_demo_window)
         //    ImGui::ShowDemoWindow(&show_demo_window);
-		
-		// game presentation window
-		// ideas: 
-		//	- have a subwindow for image editing + export
-		//  - have a subwindow for drawing? brush examples?
-		// 	- docked windows?
-		//  - audio stuff too? :D
-		
-		if(showCanvasForDrawingFlag){
-			showDrawingCanvas();
-		}else if(showImageEditorFlag){
-			showImageEditor();
-		}else if(show3dModelViewerFlag){
-			show3dModelViewer(
-				offscreenFrameBuf,
-				offscreenTexture,
-				shaderProgram,
-				vbo,
-				vao,
-				uvBuffer,
-				matrixId,
-				startTime
-			);
-		}
-		
-		ImGui::End();
+        
+        // game presentation window
+        // ideas: 
+        //    - have a subwindow for image editing + export
+        //  - have a subwindow for drawing? brush examples?
+        //     - docked windows?
+        //  - audio stuff too? :D
+        
+        if(showCanvasForDrawingFlag){
+            showDrawingCanvas();
+        }else if(showImageEditorFlag){
+            showImageEditor();
+        }else if(show3dModelViewerFlag){
+            show3dModelViewer(
+                offscreenFrameBuf,
+                offscreenTexture,
+                shaderProgram,
+                vbo,
+                vao,
+                uvBuffer,
+                matrixId,
+                startTime
+            );
+        }
+        
+        ImGui::End();
 
         // Rendering
         ImGui::Render();
@@ -233,8 +233,8 @@ int main(int, char**)
     ImGui_ImplOpenGL3_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-	
-	// TODO: delete opengl resources? e.g. buffers?
+    
+    // TODO: delete opengl resources? e.g. buffers?
 
     SDL_GL_DeleteContext(gl_context);
     SDL_DestroyWindow(window);
