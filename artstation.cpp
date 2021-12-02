@@ -135,6 +135,18 @@ int main(int, char**)
     GLuint offscreenTexture;
     setupOffscreenFramebuffer(&offscreenFrameBuf, &offscreenTexture);
     
+    // set up for texture image to be loaded as a material
+    GLuint materialTexture;
+    glGenTextures(1, &materialTexture);
+    glBindTexture(GL_TEXTURE_2D, materialTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    std::string materialTexName("");
+    
     // for fun shaders
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
     
@@ -214,6 +226,8 @@ int main(int, char**)
                 vao,
                 uvBuffer,
                 matrixId,
+                materialTexture,
+                materialTexName,
                 startTime
             );
         }

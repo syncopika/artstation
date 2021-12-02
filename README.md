@@ -10,8 +10,8 @@ image editor:
 has some filters and export image functionality (as .bmp only though currently)    
     
 3d model viewer:    
-![3d model viewer](screenshots/modelviewer.png)    
-has a trackball feature! just click and drag to rotate around the object (and zoom in/out with the mouse clickwheel)    
+![3d model viewer](screenshots/modelviewer.gif)    
+with a trackball! just click and drag to rotate around the object (and zoom in/out with the mouse clickwheel)    
     
 app option menu:    
 ![app options](screenshots/options.png)    

@@ -27,7 +27,7 @@ OTHER_LIBS_DIR = external
 
 IMGUI_DIR = imgui
 SOURCES = artstation.cpp
-SOURCES += $(APPS_DIR)/image_editor.cpp $(APPS_DIR)/drawing_canvas.cpp  $(APPS_DIR)/3d_viewer.cpp
+SOURCES += $(APPS_DIR)/stbi.cpp $(APPS_DIR)/image_editor.cpp $(APPS_DIR)/drawing_canvas.cpp  $(APPS_DIR)/3d_viewer.cpp
 SOURCES += $(UTILS_DIR)/Camera.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 

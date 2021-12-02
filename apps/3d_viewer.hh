@@ -40,6 +40,8 @@ void show3dModelViewer(
     GLuint vao,
     GLuint uvBuffer,
     GLuint matrixId,
+    GLuint materialTexture,
+    std::string& materialTextureName,
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime
 );
 

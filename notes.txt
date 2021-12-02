@@ -32,6 +32,8 @@ https://learnopengl.com/Getting-started/Shaders
 https://stackoverflow.com/questions/18210396/opengl-how-to-unbind-and-delete-buffers-properly
 https://community.khronos.org/t/do-i-need-to-bind-and-unbind-my-vertex-buffer-every-draw-call/104150
 https://stackoverflow.com/questions/3498581/in-opengl-what-is-the-simplest-way-to-create-a-perspective-view-using-only-open
+https://learnopengl.com/Getting-started/Textures
+https://github.com/opengl-tutorials/ogl/blob/master/tutorial05_textured_cube/tutorial05.cpp
 
 misc stuff ===================================================
 https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-stb_image-libraries/
@@ -39,6 +41,7 @@ https://www.3dgep.com/understanding-the-view-matrix/
 https://www.scratchapixel.com/lessons/mathematics-physics-for-computer-graphics/lookat-function
 https://computergraphics.stackexchange.com/questions/151/how-to-implement-a-trackball-in-opengl
 http://www.songho.ca/opengl/gl_camera.html
+https://stackoverflow.com/questions/64058036/preventing-multiple-define-when-including-headers
 
 TODO:
 - move 3d stuff to a separate file? (need to separate utility functions?)
