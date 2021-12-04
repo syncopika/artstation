@@ -112,13 +112,20 @@ int main(int, char**)
         std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
     }
     
-    // set up buffers for 3d objects
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
+    // set up textures to use for the image editor
+    //GLuint editedImageTexture;
+    //GLuint originalImageTexture;
     
+    // set up stuff for the 3d object viewer
     GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
+    
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    
+    GLuint normalBuffer;
+    glGenBuffers(1, &normalBuffer);
     
     GLuint uvBuffer;
     glGenBuffers(1, &uvBuffer);
@@ -134,6 +141,18 @@ int main(int, char**)
     GLuint offscreenFrameBuf;
     GLuint offscreenTexture;
     setupOffscreenFramebuffer(&offscreenFrameBuf, &offscreenTexture);
+    
+    // set up for texture image to be loaded as a material
+    GLuint materialTexture;
+    glGenTextures(1, &materialTexture);
+    glBindTexture(GL_TEXTURE_2D, materialTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);	
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    std::string materialTexName("");
     
     // for fun shaders
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime = std::chrono::high_resolution_clock::now();
@@ -213,7 +232,10 @@ int main(int, char**)
                 vbo,
                 vao,
                 uvBuffer,
+                normalBuffer,
                 matrixId,
+                materialTexture,
+                materialTexName,
                 startTime
             );
         }

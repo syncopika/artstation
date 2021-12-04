@@ -3,6 +3,8 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "tiny_obj_loader.h"
 
+#include "stb_image.h"
+
 #define WIDTH 500
 #define HEIGHT 500
 
@@ -66,14 +68,14 @@ void getObjModelInfo(
     std::vector<glm::vec2>& uvs,
     std::vector<glm::vec3>& normals
     ){
-    for (size_t s = 0; s < shapes.size(); s++) {
+    for(size_t s = 0; s < shapes.size(); s++){
       // Loop over faces(polygon)
       size_t index_offset = 0;
-      for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
+      for(size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++){
         size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
 
         // Loop over vertices in the face.
-        for (size_t v = 0; v < fv; v++) {
+        for(size_t v = 0; v < fv; v++){
           // access to vertex
           tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
           float vx = (float)attrib.vertices[3*size_t(idx.vertex_index)+0];
@@ -82,7 +84,7 @@ void getObjModelInfo(
           vertices.push_back(glm::vec3(vx, vy, vz));
 
           // Check if `normal_index` is zero or positive. negative = no normal data
-          if (idx.normal_index >= 0) {
+          if(idx.normal_index >= 0){
             float nx = (float)attrib.normals[3*size_t(idx.normal_index)+0];
             float ny = (float)attrib.normals[3*size_t(idx.normal_index)+1];
             float nz = (float)attrib.normals[3*size_t(idx.normal_index)+2];
@@ -90,7 +92,7 @@ void getObjModelInfo(
           }
 
           // Check if `texcoord_index` is zero or positive. negative = no texcoord data
-          if (idx.texcoord_index >= 0) {
+          if(idx.texcoord_index >= 0){
             float tx = (float)attrib.texcoords[2*size_t(idx.texcoord_index)+0];
             float ty = (float)attrib.texcoords[2*size_t(idx.texcoord_index)+1];
             uvs.push_back(glm::vec2(tx, ty));
@@ -116,9 +118,11 @@ const char* vertexShaderSource = R"glsl(
 
     layout(location = 0) in vec3 position;
     layout(location = 1) in vec2 vertexUV;
+    layout(location = 2) in vec3 normal;
     
-    out vec2 uv;
     out vec3 pos;
+    out vec2 uv;
+    out vec3 norm;
     
     uniform mat4 mvp;
 
@@ -126,6 +130,7 @@ const char* vertexShaderSource = R"glsl(
     {
         pos = position;
         uv = vertexUV;
+        norm = normal;
         gl_Position = mvp * vec4(position, 1.0);
     }
 )glsl";
@@ -134,16 +139,34 @@ const char* fragShaderSource = R"glsl(
     #version 330 core
 
     uniform float time;
+    uniform sampler2D theTexture;
 
     in vec3 pos;
-    out vec4 outColor;
+    in vec2 uv;
+    in vec3 norm;
+    
+    out vec4 FragColor;
 
     void main()
     {
-        float newR = cos(time)/2; //cos(time*pos.x);
-        float newG = sin(time)/2; //sin(time*pos.y);
-        float newB = cos(time)/2; //cos(time*pos.y);
-        outColor = vec4(newR, newG, newB, 1.0);
+        //float newR = cos(time)/2; //cos(time*pos.x);
+        //float newG = sin(time)/2; //sin(time*pos.y);
+        //float newB = cos(time)/2; //cos(time*pos.y);
+        
+        // add some lighting
+        vec3 lightPos = vec3(0.0f, 6.0f, -6.0f);
+        vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
+        
+        float ambientStrength = 0.1f;
+        vec3 ambient = ambientStrength * lightColor;
+        
+        vec3 n = normalize(norm);
+        vec3 lightDir = normalize(lightPos - pos);
+        float diff = max(dot(n, lightDir), 0.0f);
+        vec3 diffuse = diff * lightColor;
+        
+        vec3 color = (ambient + diffuse) * vec3(texture(theTexture, uv));
+        FragColor = vec4(color, 1.0f); //vec4(newR, newG, newB, 1.0);
     }
 )glsl";
 
@@ -179,11 +202,6 @@ void setupShaders(GLuint& shaderProgram){
     glBindFragDataLocation(shaderProgram, 0, "outColor");
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
-    
-    // set up position attribute in vertex shader
-    GLint posAttrib = glGetAttribLocation(shaderProgram, "position");
-    glVertexAttribPointer(posAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
-    glEnableVertexAttribArray(posAttrib);
 }
 
 // return the GLuint of the texture used for offscreen rendering
@@ -195,7 +213,7 @@ void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture){
     glBindFramebuffer(GL_FRAMEBUFFER, *frameBuffer);
     
     // create the texture that the scene will be rendered to (it will be empty initially)
-    glActiveTexture(GL_TEXTURE1);
+    glActiveTexture(GL_TEXTURE0); // seems to be ok to use the default texture unit
     glGenTextures(1, texture);
     glBindTexture(GL_TEXTURE_2D, *texture); // any gl texture operations now will use this texture
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, WIDTH, HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
@@ -228,14 +246,17 @@ void show3dModelViewer(
     GLuint vbo,
     GLuint vao,
     GLuint uvBuffer,
+    GLuint normalBuffer,
     GLuint matrixId,
+    GLuint materialTexture,
+    std::string& materialTextureName,
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime
     ){    
     static bool toggleWireframe = false;
     
-    std::string filepath("assets/battleship.obj");
+    std::string filepath("assets/battleship-edit2.obj");
     tinyobj::ObjReaderConfig config;
-    config.mtl_search_path = "./";
+    config.mtl_search_path = "";
     
     tinyobj::ObjReader reader;
     
@@ -257,7 +278,8 @@ void show3dModelViewer(
         
         auto& attrib = reader.GetAttrib();
         auto& shapes = reader.GetShapes();
-        //auto& materials = reader.GetMaterials();
+        auto& materials = reader.GetMaterials(); // TODO: figure out how to work with materials
+        
         std::vector<glm::vec3> verts;
         std::vector<glm::vec2> uvs;
         std::vector<glm::vec3> normals;
@@ -267,16 +289,45 @@ void show3dModelViewer(
         
         getObjModelInfo(shapes, attrib, verts, uvs, normals);
         
-        // uvs
-        //glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-        //glBufferData(GL_ARRAY_BUFFER, sizeof(uvs)*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
-        
-        //ImVec2 canvasPos0 = ImGui::GetCursorScreenPos(); 
         ImGuiIO& io = ImGui::GetIO();
         
         if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
             std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
         }else{
+            // load the image data from the file specified by the materials
+            std::string texName = "assets/" + materials[0].diffuse_texname;
+            
+            if(materialTextureName != texName){
+                // this conditional should only happen once
+                materialTextureName = texName;
+                
+                int imgWidth, imgHeight, numChannels;
+                stbi_set_flip_vertically_on_load(true);
+                unsigned char* imgData = stbi_load(
+                    texName.c_str(),
+                    &imgWidth,
+                    &imgHeight,
+                    &numChannels,
+                    0
+                );
+                
+                if(imgData == NULL){
+                    std::cout << "failed to load texture: " << texName << "\n";
+                }else{
+                    //std::cout << "r: " << (int)imgData[0] << ", g: " << (int)imgData[1] << ", b: " << (int)imgData[2] << ", a: " << (int)imgData[3] << '\n';
+                    //std::cout << "uv size: " << uvs.size() << '\n';
+                }
+                
+                // prep for using image as texture
+                // important to specify the active texture to use otherwise when switching between apps that use textures, 
+                // we might use the wrong active texture and get a segmentation fault
+                glActiveTexture(GL_TEXTURE0);
+                glBindTexture(GL_TEXTURE_2D, materialTexture);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
+                glBindTexture(GL_TEXTURE_2D, 0); // done with this texture for now so unbind
+                stbi_image_free(imgData);
+            }
+            
             int viewportHeight = HEIGHT;
             int viewportWidth = WIDTH;
             
@@ -300,12 +351,23 @@ void show3dModelViewer(
             // load the vertices for the model
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             glBufferData(GL_ARRAY_BUFFER, verts.size()*sizeof(glm::vec3), &verts[0], GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            
+            // uvs
+            glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+            glBufferData(GL_ARRAY_BUFFER, uvs.size()*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            
+            // normals
+            glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+            glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
             
             // for shaders
-            auto now = std::chrono::high_resolution_clock::now();
-            float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
-            GLuint t = glGetUniformLocation(shaderProgram, "time");
-            glUniform1f(t, time);
+            //auto now = std::chrono::high_resolution_clock::now();
+            //float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
+            //GLuint t = glGetUniformLocation(shaderProgram, "time");
+            //glUniform1f(t, time);
             
             // handle any input for trackball
             ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
@@ -343,28 +405,39 @@ void show3dModelViewer(
             model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
             model = glm::translate(model, glm::vec3(0, 0, 0)); // place at center (0,0,0)
             
-            // multiply perspectiveMat view and model matrices to get the final view
+            // multiply perspectiveMat, view and model matrices to get the final view
             glm::mat4 viewMat = glm::lookAt(cam.getCameraPos(), glm::vec3(modelPosX, modelPosY, modelPosZ), glm::vec3(0, cam.up, 0));
             glm::mat4 mvp = perspectiveMat * viewMat * model;
             
+            // give mvp info to shader
             glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
             
-            // set up attributes to vertex buffer
-            glEnableVertexAttribArray(0);
+            // set up attributes for the shader (vertex position, uv, normals)
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
+            // 0 means the 0th element of the inputs to the vertex shader
+            // 3 means the size of the input (b/c vec3 in this case)
             glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
             
-             //glEnableVertexAttribArray(1);
-            //glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-            //glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+            // pass the uv coords to the vertex shader
+            glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+            // this buffer is separate from the vbo, so use 0 and 0 for the last args
+            // if vertex and uv data were in the same buffer, then those values would be different
+            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
             
+            // pass the normal coords to the vertex shader
+            glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+            
+            glEnableVertexAttribArray(0);
+            glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(2);
+            
+            glActiveTexture(GL_TEXTURE0);
+            glBindTexture(GL_TEXTURE_2D, materialTexture); // make sure we use the loaded texture
             glDrawArrays(GL_TRIANGLES, 0, verts.size());
+            glBindTexture(GL_TEXTURE_2D, 0);
             
-            glDisableVertexAttribArray(0);
-            //glDisableVertexAttribArray(1);
-            
-            // grab the offscreen texture and draw it to an imgui image
-            glActiveTexture(GL_TEXTURE1);
+            // draw texture to an imgui image
             int pixelDataLen = viewportWidth*viewportHeight*3;
             unsigned char* pixelData = new unsigned char[pixelDataLen];
             glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
@@ -372,6 +445,10 @@ void show3dModelViewer(
             // center the image
             ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
             ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(viewportWidth, viewportHeight));
+            
+            glDisableVertexAttribArray(0);
+            glDisableVertexAttribArray(1);
+            glDisableVertexAttribArray(2);
             
             delete[] pixelData;
             

@@ -27,7 +27,7 @@ OTHER_LIBS_DIR = external
 
 IMGUI_DIR = imgui
 SOURCES = artstation.cpp
-SOURCES += $(APPS_DIR)/image_editor.cpp $(APPS_DIR)/drawing_canvas.cpp  $(APPS_DIR)/3d_viewer.cpp
+SOURCES += $(APPS_DIR)/stbi.cpp $(APPS_DIR)/image_editor.cpp $(APPS_DIR)/drawing_canvas.cpp  $(APPS_DIR)/3d_viewer.cpp
 SOURCES += $(UTILS_DIR)/Camera.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_tables.cpp $(IMGUI_DIR)/imgui_widgets.cpp
 
@@ -35,7 +35,7 @@ SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui
 SOURCES += $(IMGUI_DIR)/imgui_impl_sdl.cpp $(IMGUI_DIR)/imgui_impl_opengl3.cpp
 
 # note all the include flags for all the header file locations
-CXXFLAGS = -Wall -Wformat -std=c++14 -I$(SDL_INCLUDE) -I$(IMGUI_DIR) -I$(OPENGL_INCLUDE) -I$(GLM_INCLUDE) -I$(OTHER_LIBS_DIR) -I$(APPS_DIR)
+CXXFLAGS = -g -Wall -Wformat -std=c++14 -I$(SDL_INCLUDE) -I$(IMGUI_DIR) -I$(OPENGL_INCLUDE) -I$(GLM_INCLUDE) -I$(OTHER_LIBS_DIR) -I$(APPS_DIR)
 
 GLEW_LIBS = -lglew32 -lglu32
 
