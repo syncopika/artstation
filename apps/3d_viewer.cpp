@@ -319,6 +319,9 @@ void show3dModelViewer(
                 }
                 
                 // prep for using image as texture
+                // important to specify the active texture to use otherwise when switching between apps that use textures, 
+                // we might use the wrong active texture and get a segmentation fault
+                glActiveTexture(GL_TEXTURE0);
                 glBindTexture(GL_TEXTURE_2D, materialTexture);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
                 glBindTexture(GL_TEXTURE_2D, 0); // done with this texture for now so unbind

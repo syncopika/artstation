@@ -112,7 +112,11 @@ int main(int, char**)
         std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
     }
     
-    // set up buffers for 3d objects    
+    // set up textures to use for the image editor
+    //GLuint editedImageTexture;
+    //GLuint originalImageTexture;
+    
+    // set up stuff for the 3d object viewer
     GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
