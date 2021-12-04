@@ -2,11 +2,11 @@
 just trying out Dear ImGUI and OpenGL for a bunch of small apps like a drawing canvas, image editor, and more!    
     
 drawing canvas:    
-![current look](screenshots/drawingcanvas.png)    
+![current look](screenshots/drawingcanvas.gif)    
 has adjustable brush width    
 	
 image editor:   
-![image editor](screenshots/image_editor.png)    
+![image editor](screenshots/image_editor.gif)    
 has some filters and export image functionality (as .bmp only though currently)    
     
 3d model viewer:    

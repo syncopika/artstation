@@ -118,9 +118,11 @@ const char* vertexShaderSource = R"glsl(
 
     layout(location = 0) in vec3 position;
     layout(location = 1) in vec2 vertexUV;
+    layout(location = 2) in vec3 normal;
     
     out vec3 pos;
     out vec2 uv;
+    out vec3 norm;
     
     uniform mat4 mvp;
 
@@ -128,6 +130,7 @@ const char* vertexShaderSource = R"glsl(
     {
         pos = position;
         uv = vertexUV;
+        norm = normal;
         gl_Position = mvp * vec4(position, 1.0);
     }
 )glsl";
@@ -136,20 +139,34 @@ const char* fragShaderSource = R"glsl(
     #version 330 core
 
     uniform float time;
+    uniform sampler2D theTexture;
 
     in vec3 pos;
     in vec2 uv;
+    in vec3 norm;
     
     out vec4 FragColor;
-    
-    uniform sampler2D theTexture;
 
     void main()
     {
         //float newR = cos(time)/2; //cos(time*pos.x);
         //float newG = sin(time)/2; //sin(time*pos.y);
         //float newB = cos(time)/2; //cos(time*pos.y);
-        FragColor = texture(theTexture, uv); //vec4(newR, newG, newB, 1.0);
+        
+        // add some lighting
+        vec3 lightPos = vec3(0.0f, 6.0f, -6.0f);
+        vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
+        
+        float ambientStrength = 0.1f;
+        vec3 ambient = ambientStrength * lightColor;
+        
+        vec3 n = normalize(norm);
+        vec3 lightDir = normalize(lightPos - pos);
+        float diff = max(dot(n, lightDir), 0.0f);
+        vec3 diffuse = diff * lightColor;
+        
+        vec3 color = (ambient + diffuse) * vec3(texture(theTexture, uv));
+        FragColor = vec4(color, 1.0f); //vec4(newR, newG, newB, 1.0);
     }
 )glsl";
 
@@ -229,6 +246,7 @@ void show3dModelViewer(
     GLuint vbo,
     GLuint vao,
     GLuint uvBuffer,
+    GLuint normalBuffer,
     GLuint matrixId,
     GLuint materialTexture,
     std::string& materialTextureName,
@@ -271,7 +289,6 @@ void show3dModelViewer(
         
         getObjModelInfo(shapes, attrib, verts, uvs, normals);
         
-        //ImVec2 canvasPos0 = ImGui::GetCursorScreenPos(); 
         ImGuiIO& io = ImGui::GetIO();
         
         if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
@@ -304,7 +321,6 @@ void show3dModelViewer(
                 // prep for using image as texture
                 glBindTexture(GL_TEXTURE_2D, materialTexture);
                 glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
-                //glGenerateMipmap(GL_TEXTURE_2D);
                 glBindTexture(GL_TEXTURE_2D, 0); // done with this texture for now so unbind
                 stbi_image_free(imgData);
             }
@@ -337,6 +353,11 @@ void show3dModelViewer(
             // uvs
             glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
             glBufferData(GL_ARRAY_BUFFER, uvs.size()*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+            glBindBuffer(GL_ARRAY_BUFFER, 0);
+            
+            // normals
+            glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+            glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
             glBindBuffer(GL_ARRAY_BUFFER, 0);
             
             // for shaders
@@ -381,13 +402,14 @@ void show3dModelViewer(
             model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
             model = glm::translate(model, glm::vec3(0, 0, 0)); // place at center (0,0,0)
             
-            // multiply perspectiveMat view and model matrices to get the final view
+            // multiply perspectiveMat, view and model matrices to get the final view
             glm::mat4 viewMat = glm::lookAt(cam.getCameraPos(), glm::vec3(modelPosX, modelPosY, modelPosZ), glm::vec3(0, cam.up, 0));
             glm::mat4 mvp = perspectiveMat * viewMat * model;
             
+            // give mvp info to shader
             glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
             
-            // set up attributes for the shader (vertex position and uv info)
+            // set up attributes for the shader (vertex position, uv, normals)
             glBindBuffer(GL_ARRAY_BUFFER, vbo);
             // 0 means the 0th element of the inputs to the vertex shader
             // 3 means the size of the input (b/c vec3 in this case)
@@ -399,8 +421,13 @@ void show3dModelViewer(
             // if vertex and uv data were in the same buffer, then those values would be different
             glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
             
+            // pass the normal coords to the vertex shader
+            glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+            
             glEnableVertexAttribArray(0);
             glEnableVertexAttribArray(1);
+            glEnableVertexAttribArray(2);
             
             glActiveTexture(GL_TEXTURE0);
             glBindTexture(GL_TEXTURE_2D, materialTexture); // make sure we use the loaded texture
@@ -418,6 +445,7 @@ void show3dModelViewer(
             
             glDisableVertexAttribArray(0);
             glDisableVertexAttribArray(1);
+            glDisableVertexAttribArray(2);
             
             delete[] pixelData;
             

@@ -34,6 +34,9 @@ https://community.khronos.org/t/do-i-need-to-bind-and-unbind-my-vertex-buffer-ev
 https://stackoverflow.com/questions/3498581/in-opengl-what-is-the-simplest-way-to-create-a-perspective-view-using-only-open
 https://learnopengl.com/Getting-started/Textures
 https://github.com/opengl-tutorials/ogl/blob/master/tutorial05_textured_cube/tutorial05.cpp
+https://stackoverflow.com/questions/3849052/is-there-an-easy-way-to-get-shadows-in-opengl
+https://learnopengl.com/Lighting/Basic-Lighting
+https://stackoverflow.com/questions/7223623/storing-different-vertex-attributes-in-different-vbos
 
 misc stuff ===================================================
 https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-stb_image-libraries/

@@ -39,6 +39,7 @@ void show3dModelViewer(
     GLuint vbo,
     GLuint vao,
     GLuint uvBuffer,
+    GLuint normalBuffer,
     GLuint matrixId,
     GLuint materialTexture,
     std::string& materialTextureName,

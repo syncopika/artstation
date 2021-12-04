@@ -30,6 +30,7 @@ bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* 
     int imageWidth = 0;
     int imageHeight = 0;
     int imageChannels = 4; //rgba
+    stbi_set_flip_vertically_on_load(false);
     unsigned char* imageData = stbi_load(filename, &imageWidth, &imageHeight, &imageChannels, 4);
     if(imageData == NULL){
         return false;
@@ -178,6 +179,7 @@ void showImageEditor(){
             // TODO: allow image naming
             // TODO: hardcoding 4 channels b/c not sure we were getting the right channel value back for the imageChannels variable?
             stbi_write_bmp("artstation_image_export.bmp", imageWidth, imageHeight, 4, (void *)pixelData);
+            delete pixelData;
         }
         
         if(showSaturateParams){

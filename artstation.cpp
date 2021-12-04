@@ -112,13 +112,16 @@ int main(int, char**)
         std::cout << "problem with glew: " << glewGetErrorString(err) << std::endl;
     }
     
-    // set up buffers for 3d objects
-    GLuint vbo;
-    glGenBuffers(1, &vbo);
-    
+    // set up buffers for 3d objects    
     GLuint vao;
     glGenVertexArrays(1, &vao);
     glBindVertexArray(vao);
+    
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    
+    GLuint normalBuffer;
+    glGenBuffers(1, &normalBuffer);
     
     GLuint uvBuffer;
     glGenBuffers(1, &uvBuffer);
@@ -225,6 +228,7 @@ int main(int, char**)
                 vbo,
                 vao,
                 uvBuffer,
+                normalBuffer,
                 matrixId,
                 materialTexture,
                 materialTexName,
