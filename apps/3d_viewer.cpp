@@ -251,10 +251,20 @@ void show3dModelViewer(
     GLuint materialTexture,
     std::string& materialTextureName,
     std::chrono::time_point<std::chrono::high_resolution_clock> startTime
-    ){    
+){
+    static char importObjFilepath[64] = "assets/battleship-edit2.obj";
+    static std::string filepath(importObjFilepath);
     static bool toggleWireframe = false;
     
-    std::string filepath("assets/battleship-edit2.obj");
+    bool importObjClicked = ImGui::Button("import .obj model");
+    ImGui::SameLine();
+    ImGui::InputText("filepath", importObjFilepath, 64);
+    
+    if(importObjClicked){
+        // update filepath with new model path
+        filepath = std::string(importObjFilepath);
+    }
+    
     tinyobj::ObjReaderConfig config;
     config.mtl_search_path = "";
     
@@ -263,204 +273,204 @@ void show3dModelViewer(
     if(!reader.ParseFromFile(filepath, config)){
         if(!reader.Error().empty()){
             ImGui::Text("TinyObjReader: %s", (reader.Error()).c_str());
-            ImGui::EndChild();
         }
+        ImGui::Text("error reading in .obj file. is the path correct?");
+        return;
+    }
+    
+    if(!reader.Warning().empty()){
+        ImGui::Text("TinyObjReader: %s", (reader.Warning()).c_str());
+    }
+    
+    // set up some static variables to let user control camera
+    static Camera cam;
+    static float modelPosX = 0.0f;
+    static float modelPosY = 0.0f;
+    static float modelPosZ = -8.0f;
+    
+    auto& attrib = reader.GetAttrib();
+    auto& shapes = reader.GetShapes();
+    auto& materials = reader.GetMaterials(); // TODO: figure out how to work with materials
+    
+    std::vector<glm::vec3> verts;
+    std::vector<glm::vec2> uvs;
+    std::vector<glm::vec3> normals;
+    
+    ImGui::Text("model has %d shapes", shapes.size());
+    ImGui::Text("model has %d vertices", attrib.vertices.size());
+    
+    getObjModelInfo(shapes, attrib, verts, uvs, normals);
+    
+    ImGuiIO& io = ImGui::GetIO();
+    
+    if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
+        std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
     }else{
-        if(!reader.Warning().empty()){
-            ImGui::Text("TinyObjReader: %s", (reader.Warning()).c_str());
-        }
+        // load the image data from the file specified by the materials
+        std::string texName = "assets/" + materials[0].diffuse_texname;
         
-        // set up some static variables to let user control camera
-        static Camera cam;
-        static float modelPosX = 0.0f;
-        static float modelPosY = 0.0f;
-        static float modelPosZ = -8.0f;
-        
-        auto& attrib = reader.GetAttrib();
-        auto& shapes = reader.GetShapes();
-        auto& materials = reader.GetMaterials(); // TODO: figure out how to work with materials
-        
-        std::vector<glm::vec3> verts;
-        std::vector<glm::vec2> uvs;
-        std::vector<glm::vec3> normals;
-        
-        ImGui::Text("model has %d shapes", shapes.size());
-        ImGui::Text("model has %d vertices", attrib.vertices.size());
-        
-        getObjModelInfo(shapes, attrib, verts, uvs, normals);
-        
-        ImGuiIO& io = ImGui::GetIO();
-        
-        if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
-            std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
-        }else{
-            // load the image data from the file specified by the materials
-            std::string texName = "assets/" + materials[0].diffuse_texname;
+        if(materialTextureName != texName){
+            // this conditional should only happen once
+            materialTextureName = texName;
             
-            if(materialTextureName != texName){
-                // this conditional should only happen once
-                materialTextureName = texName;
-                
-                int imgWidth, imgHeight, numChannels;
-                stbi_set_flip_vertically_on_load(true);
-                unsigned char* imgData = stbi_load(
-                    texName.c_str(),
-                    &imgWidth,
-                    &imgHeight,
-                    &numChannels,
-                    0
-                );
-                
-                if(imgData == NULL){
-                    std::cout << "failed to load texture: " << texName << "\n";
-                }else{
-                    //std::cout << "r: " << (int)imgData[0] << ", g: " << (int)imgData[1] << ", b: " << (int)imgData[2] << ", a: " << (int)imgData[3] << '\n';
-                    //std::cout << "uv size: " << uvs.size() << '\n';
-                }
-                
-                // prep for using image as texture
-                // important to specify the active texture to use otherwise when switching between apps that use textures, 
-                // we might use the wrong active texture and get a segmentation fault
-                glActiveTexture(GL_TEXTURE0);
-                glBindTexture(GL_TEXTURE_2D, materialTexture);
-                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
-                glBindTexture(GL_TEXTURE_2D, 0); // done with this texture for now so unbind
-                stbi_image_free(imgData);
-            }
+            int imgWidth, imgHeight, numChannels;
+            stbi_set_flip_vertically_on_load(true);
+            unsigned char* imgData = stbi_load(
+                texName.c_str(),
+                &imgWidth,
+                &imgHeight,
+                &numChannels,
+                0
+            );
             
-            int viewportHeight = HEIGHT;
-            int viewportWidth = WIDTH;
-            
-            // draw to the offscreen frame buffer
-            // adjust the glviewport to be drawn to so the image comes out correctly
-            glBindFramebuffer(GL_FRAMEBUFFER, offscreenFrameBuf);
-            glViewport(0, 0, viewportWidth, viewportHeight);
-            glClearColor(0.62f, 0.73f, 0.78f, 0.0f); // the color of the background
-            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-            
-            if(toggleWireframe){
-                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            if(imgData == NULL){
+                std::cout << "failed to load texture: " << texName << "\n";
             }else{
-                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+                //std::cout << "r: " << (int)imgData[0] << ", g: " << (int)imgData[1] << ", b: " << (int)imgData[2] << ", a: " << (int)imgData[3] << '\n';
+                //std::cout << "uv size: " << uvs.size() << '\n';
             }
             
-            glEnable(GL_DEPTH_TEST);
-            glDepthFunc(GL_LESS);
-            glEnable(GL_CULL_FACE);
-            
-            // load the vertices for the model
-            glBindBuffer(GL_ARRAY_BUFFER, vbo);
-            glBufferData(GL_ARRAY_BUFFER, verts.size()*sizeof(glm::vec3), &verts[0], GL_STATIC_DRAW);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            
-            // uvs
-            glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-            glBufferData(GL_ARRAY_BUFFER, uvs.size()*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            
-            // normals
-            glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
-            glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
-            glBindBuffer(GL_ARRAY_BUFFER, 0);
-            
-            // for shaders
-            //auto now = std::chrono::high_resolution_clock::now();
-            //float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
-            //GLuint t = glGetUniformLocation(shaderProgram, "time");
-            //glUniform1f(t, time);
-            
-            // handle any input for trackball
-            ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-            if(std::abs(dragDelta.x) > 0 || std::abs(dragDelta.y) > 0){
-                //std::cout << "x: " << dragDelta.x << ", y: " << dragDelta.y << '\n';
-                cam.rotate(-dragDelta.x/800, dragDelta.y/800); // moving mouse up is a negative delta y
-            }
-            
-            if(io.MouseWheel != 0.0f){
-                if(io.MouseWheel < 0){
-                    // scroll backwards, zoom out
-                    cam.zoom(-1.0f);
-                }else{
-                    cam.zoom(1.0f);
-                }
-            }
-            
-            // set up project matrix
-            float fovAngle = 60.0f;
-            float aspect = WIDTH / HEIGHT;
-            float near = 0.01f;
-            float far = 100.0f;
-            glm::mat4 perspectiveMat = createPerspectiveMatrix(fovAngle, aspect, near, far);
-            
-            // store y rotation and rotate based on last y rotation so the model will rotate 360
-            static glm::mat4 lastYRot(1.0);
-            lastYRot = glm::rotate(lastYRot, angleToRads(0.5f), glm::vec3(0,1,0));
-            
-            // the following should do: move model to origin, scale it, rotate about x, rotate about y, then move it to final position (i.e. further away from the camera along z)
-            // these operations here are ones we want to keep constant through each render, so we do them on the identity matrix (not using the previous object's transformation matrix)
-            glm::mat4 model(1.0);
-            model = glm::translate(model, glm::vec3(modelPosX, modelPosY, modelPosZ)); // final position of model
-            model = model * lastYRot; // rotate about Y based on last rotation
-            model = glm::rotate(model, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
-            model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
-            model = glm::translate(model, glm::vec3(0, 0, 0)); // place at center (0,0,0)
-            
-            // multiply perspectiveMat, view and model matrices to get the final view
-            glm::mat4 viewMat = glm::lookAt(cam.getCameraPos(), glm::vec3(modelPosX, modelPosY, modelPosZ), glm::vec3(0, cam.up, 0));
-            glm::mat4 mvp = perspectiveMat * viewMat * model;
-            
-            // give mvp info to shader
-            glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
-            
-            // set up attributes for the shader (vertex position, uv, normals)
-            glBindBuffer(GL_ARRAY_BUFFER, vbo);
-            // 0 means the 0th element of the inputs to the vertex shader
-            // 3 means the size of the input (b/c vec3 in this case)
-            glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-            
-            // pass the uv coords to the vertex shader
-            glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
-            // this buffer is separate from the vbo, so use 0 and 0 for the last args
-            // if vertex and uv data were in the same buffer, then those values would be different
-            glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-            
-            // pass the normal coords to the vertex shader
-            glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
-            glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-            
-            glEnableVertexAttribArray(0);
-            glEnableVertexAttribArray(1);
-            glEnableVertexAttribArray(2);
-            
+            // prep for using image as texture
+            // important to specify the active texture to use otherwise when switching between apps that use textures, 
+            // we might use the wrong active texture and get a segmentation fault
             glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, materialTexture); // make sure we use the loaded texture
-            glDrawArrays(GL_TRIANGLES, 0, verts.size());
-            glBindTexture(GL_TEXTURE_2D, 0);
-            
-            // draw texture to an imgui image
-            int pixelDataLen = viewportWidth*viewportHeight*3;
-            unsigned char* pixelData = new unsigned char[pixelDataLen];
-            glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
-            
-            // center the image
-            ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
-            ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(viewportWidth, viewportHeight));
-            
-            glDisableVertexAttribArray(0);
-            glDisableVertexAttribArray(1);
-            glDisableVertexAttribArray(2);
-            
-            delete[] pixelData;
-            
-            // unbind offscreenFrameBuf and use default framebuffer again (show the gui window) - I think that's how this works?
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glBindTexture(GL_TEXTURE_2D, materialTexture);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, imgWidth, imgHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, imgData);
+            glBindTexture(GL_TEXTURE_2D, 0); // done with this texture for now so unbind
+            stbi_image_free(imgData);
         }
         
-        ImGui::Indent(ImGui::GetWindowSize().x/2 - 30); // attempt to center the button
-        if(ImGui::Button("toggle wireframe")){
-            toggleWireframe = !toggleWireframe; 
+        int viewportHeight = HEIGHT;
+        int viewportWidth = WIDTH;
+        
+        // draw to the offscreen frame buffer
+        // adjust the glviewport to be drawn to so the image comes out correctly
+        glBindFramebuffer(GL_FRAMEBUFFER, offscreenFrameBuf);
+        glViewport(0, 0, viewportWidth, viewportHeight);
+        glClearColor(0.62f, 0.73f, 0.78f, 0.0f); // the color of the background
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        
+        if(toggleWireframe){
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        }else{
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         }
         
+        glEnable(GL_DEPTH_TEST);
+        glDepthFunc(GL_LESS);
+        glEnable(GL_CULL_FACE);
+        
+        // load the vertices for the model
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        glBufferData(GL_ARRAY_BUFFER, verts.size()*sizeof(glm::vec3), &verts[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        
+        // uvs
+        glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+        glBufferData(GL_ARRAY_BUFFER, uvs.size()*sizeof(glm::vec2), &uvs[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        
+        // normals
+        glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+        glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
+        glBindBuffer(GL_ARRAY_BUFFER, 0);
+        
+        // for shaders
+        //auto now = std::chrono::high_resolution_clock::now();
+        //float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
+        //GLuint t = glGetUniformLocation(shaderProgram, "time");
+        //glUniform1f(t, time);
+        
+        // handle any input for trackball
+        ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+        if(std::abs(dragDelta.x) > 0 || std::abs(dragDelta.y) > 0){
+            //std::cout << "x: " << dragDelta.x << ", y: " << dragDelta.y << '\n';
+            cam.rotate(-dragDelta.x/800, dragDelta.y/800); // moving mouse up is a negative delta y
+        }
+        
+        if(io.MouseWheel != 0.0f){
+            if(io.MouseWheel < 0){
+                // scroll backwards, zoom out
+                cam.zoom(-1.0f);
+            }else{
+                cam.zoom(1.0f);
+            }
+        }
+        
+        // set up project matrix
+        float fovAngle = 60.0f;
+        float aspect = WIDTH / HEIGHT;
+        float near = 0.01f;
+        float far = 100.0f;
+        glm::mat4 perspectiveMat = createPerspectiveMatrix(fovAngle, aspect, near, far);
+        
+        // store y rotation and rotate based on last y rotation so the model will rotate 360
+        static glm::mat4 lastYRot(1.0);
+        lastYRot = glm::rotate(lastYRot, angleToRads(0.5f), glm::vec3(0,1,0));
+        
+        // the following should do: move model to origin, scale it, rotate about x, rotate about y, then move it to final position (i.e. further away from the camera along z)
+        // these operations here are ones we want to keep constant through each render, so we do them on the identity matrix (not using the previous object's transformation matrix)
+        glm::mat4 model(1.0);
+        model = glm::translate(model, glm::vec3(modelPosX, modelPosY, modelPosZ)); // final position of model
+        model = model * lastYRot; // rotate about Y based on last rotation
+        model = glm::rotate(model, angleToRads(180.0f), glm::vec3(1, 0, 0)); // rotate about x 180 deg to make model right side up
+        model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f)); // scale down by half
+        model = glm::translate(model, glm::vec3(0, 0, 0)); // place at center (0,0,0)
+        
+        // multiply perspectiveMat, view and model matrices to get the final view
+        glm::mat4 viewMat = glm::lookAt(cam.getCameraPos(), glm::vec3(modelPosX, modelPosY, modelPosZ), glm::vec3(0, cam.up, 0));
+        glm::mat4 mvp = perspectiveMat * viewMat * model;
+        
+        // give mvp info to shader
+        glUniformMatrix4fv(matrixId, 1, GL_FALSE, &mvp[0][0]);
+        
+        // set up attributes for the shader (vertex position, uv, normals)
+        glBindBuffer(GL_ARRAY_BUFFER, vbo);
+        // 0 means the 0th element of the inputs to the vertex shader
+        // 3 means the size of the input (b/c vec3 in this case)
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        
+        // pass the uv coords to the vertex shader
+        glBindBuffer(GL_ARRAY_BUFFER, uvBuffer);
+        // this buffer is separate from the vbo, so use 0 and 0 for the last args
+        // if vertex and uv data were in the same buffer, then those values would be different
+        glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        
+        // pass the normal coords to the vertex shader
+        glBindBuffer(GL_ARRAY_BUFFER, normalBuffer);
+        glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+        
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+        glEnableVertexAttribArray(2);
+        
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, materialTexture); // make sure we use the loaded texture
+        glDrawArrays(GL_TRIANGLES, 0, verts.size());
+        glBindTexture(GL_TEXTURE_2D, 0);
+        
+        // draw texture to an imgui image
+        int pixelDataLen = viewportWidth*viewportHeight*3;
+        unsigned char* pixelData = new unsigned char[pixelDataLen];
+        glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
+        
+        // center the image
+        ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
+        ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(viewportWidth, viewportHeight));
+        
+        glDisableVertexAttribArray(0);
+        glDisableVertexAttribArray(1);
+        glDisableVertexAttribArray(2);
+        
+        delete[] pixelData;
+        
+        // unbind offscreenFrameBuf and use default framebuffer again (show the gui window) - I think that's how this works?
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    }
+    
+    ImGui::Indent(ImGui::GetWindowSize().x/2 - 30); // attempt to center the button
+    if(ImGui::Button("toggle wireframe")){
+        toggleWireframe = !toggleWireframe; 
     }
 
 }

@@ -7,7 +7,7 @@
 #include <string>
 #include <GL/glew.h>
 
-std::string trimString(std::string str);
+std::string trimString(std::string& str);
 int correctRGB(int channel);
 bool importImage(const char* filename, GLuint* tex, GLuint* originalImage, int* width, int* height, int* channels);
 void showImageEditor();

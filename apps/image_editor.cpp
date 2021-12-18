@@ -7,7 +7,7 @@
 #define IMAGE_DISPLAY GL_TEXTURE2
 #define ORIGINAL_IMAGE GL_TEXTURE3
 
-std::string trimString(std::string str){
+std::string trimString(std::string& str){
     std::string trimmed("");
     std::string::iterator it;
     for(it = str.begin(); it < str.end(); it++){
