@@ -290,7 +290,7 @@ void show3dModelViewer(
     
     auto& attrib = reader.GetAttrib();
     auto& shapes = reader.GetShapes();
-    auto& materials = reader.GetMaterials(); // TODO: figure out how to work with materials
+    auto& materials = reader.GetMaterials();
     
     std::vector<glm::vec3> verts;
     std::vector<glm::vec2> uvs;
@@ -310,11 +310,13 @@ void show3dModelViewer(
         std::string texName = "assets/" + materials[0].diffuse_texname;
         
         if(materialTextureName != texName){
-            // this conditional should only happen once
+            // this conditional should only happen once when a new obj is loaded
             materialTextureName = texName;
             
             int imgWidth, imgHeight, numChannels;
+            
             stbi_set_flip_vertically_on_load(true);
+            
             unsigned char* imgData = stbi_load(
                 texName.c_str(),
                 &imgWidth,
@@ -325,6 +327,15 @@ void show3dModelViewer(
             
             if(imgData == NULL){
                 std::cout << "failed to load texture: " << texName << "\n";
+                
+                // load in placeholder
+                imgData = stbi_load(
+                    "assets/color.png",
+                    &imgWidth,
+                    &imgHeight,
+                    &numChannels,
+                    0
+                );
             }else{
                 //std::cout << "r: " << (int)imgData[0] << ", g: " << (int)imgData[1] << ", b: " << (int)imgData[2] << ", a: " << (int)imgData[3] << '\n';
                 //std::cout << "uv size: " << uvs.size() << '\n';
