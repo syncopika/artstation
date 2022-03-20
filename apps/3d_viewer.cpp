@@ -313,7 +313,7 @@ void show3dModelViewer(
             // this conditional should only happen once when a new obj is loaded
             materialTextureName = texName;
             
-            int imgWidth, imgHeight, numChannels;
+            int imgWidth, imgHeight, numChannels=4;
             
             stbi_set_flip_vertically_on_load(true);
             
@@ -322,7 +322,7 @@ void show3dModelViewer(
                 &imgWidth,
                 &imgHeight,
                 &numChannels,
-                0
+                4
             );
             
             if(imgData == NULL){
@@ -334,7 +334,7 @@ void show3dModelViewer(
                     &imgWidth,
                     &imgHeight,
                     &numChannels,
-                    0
+                    4
                 );
             }else{
                 //std::cout << "r: " << (int)imgData[0] << ", g: " << (int)imgData[1] << ", b: " << (int)imgData[2] << ", a: " << (int)imgData[3] << '\n';

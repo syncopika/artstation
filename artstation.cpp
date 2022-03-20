@@ -205,7 +205,7 @@ int main(int, char**)
             ImGui::EndMainMenuBar();
         }
         
-        ImGui::SetNextWindowSize(ImVec2(currSDLWidth, currSDLHeight*0.98f));
+        ImGui::SetNextWindowSize(ImVec2(currSDLWidth, currSDLHeight));
         ImGui::SetNextWindowPos(ImVec2(0, 18));
         ImGui::Begin("App", NULL, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_HorizontalScrollbar);
 
@@ -213,9 +213,7 @@ int main(int, char**)
         //if (show_demo_window)
         //    ImGui::ShowDemoWindow(&show_demo_window);
         
-        // game presentation window
         // ideas: 
-        //    - have a subwindow for image editing + export
         //  - have a subwindow for drawing? brush examples?
         //     - docked windows?
         //  - audio stuff too? :D
