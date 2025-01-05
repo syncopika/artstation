@@ -67,7 +67,7 @@ void getObjModelInfo(
     std::vector<glm::vec3>& vertices,
     std::vector<glm::vec2>& uvs,
     std::vector<glm::vec3>& normals
-    ){
+){
     for(size_t s = 0; s < shapes.size(); s++){
       // Loop over faces(polygon)
       size_t index_offset = 0;
@@ -124,7 +124,7 @@ const char* vertexShaderSource = R"glsl(
     out vec2 uv;
     out vec3 norm;
     
-    uniform float time;
+    uniform float u_time;
     uniform mat4 mvp;
 
     void main()
@@ -139,7 +139,7 @@ const char* vertexShaderSource = R"glsl(
 const char* fragShaderSource = R"glsl(
     #version 330 core
 
-    uniform float time;
+    uniform float u_time;
     uniform sampler2D theTexture;
 
     in vec3 pos;
@@ -150,9 +150,9 @@ const char* fragShaderSource = R"glsl(
 
     void main()
     {
-        //float newR = cos(time)/2; //cos(time*pos.x);
-        //float newG = sin(time)/2; //sin(time*pos.y);
-        //float newB = cos(time)/2; //cos(time*pos.y);
+        //float newR = cos(u_time)/2; //cos(u_time*pos.x);
+        //float newG = sin(u_time)/2; //sin(u_time*pos.y);
+        //float newB = cos(u_time)/2; //cos(u_time*pos.y);
         
         // add some lighting
         vec3 lightPos = vec3(0.0f, 6.0f, -6.0f);
@@ -331,7 +331,7 @@ void show3dModelViewer(
         out vec2 uv;
         out vec3 norm;
         
-        uniform float time;
+        uniform float u_time;
         uniform mat4 mvp;
 
         void main()
@@ -348,7 +348,7 @@ void show3dModelViewer(
       R"glsl(
         #version 330 core
 
-        uniform float time;
+        uniform float u_time;
         uniform sampler2D theTexture;
 
         in vec3 pos;
@@ -512,7 +512,7 @@ void show3dModelViewer(
         // variables for shaders
         auto now = std::chrono::high_resolution_clock::now();
         float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
-        GLuint t = glGetUniformLocation(shaderProgram, "time");
+        GLuint t = glGetUniformLocation(shaderProgram, "u_time");
         glUniform1f(t, time);
         
         // handle any input for trackball
