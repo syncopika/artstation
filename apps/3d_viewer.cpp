@@ -319,6 +319,9 @@ void show3dModelViewer(
     
     static std::string errMsg("");
     
+    // keep track of time uniform var for shader
+    static float time = 0;
+    
     static std::string vertexShaderEditable(
       R"glsl(
         #version 330 core
@@ -510,8 +513,9 @@ void show3dModelViewer(
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
         // variables for shaders
-        auto now = std::chrono::high_resolution_clock::now();
-        float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
+        //auto now = std::chrono::high_resolution_clock::now();
+        //float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
+        time += 0.005f; // https://github.com/syncopika/threejs-projects/blob/master/shaders/index.js#L105
         GLuint t = glGetUniformLocation(shaderProgram, "u_time");
         glUniform1f(t, time);
         
@@ -617,6 +621,8 @@ void show3dModelViewer(
     
     if(ImGui::Button("update shader")){
       // update shaders
+      // TODO: this appears to work but not immediately after clicking the button? e.g. it seems to take 2 clicks
+      // to get the updated shaders to work how I would expect but not sure why atm.
       recompileShaders(shaderProgram, vertexShaderEditable, fragmentShaderEditable, errMsg);
     }
     
