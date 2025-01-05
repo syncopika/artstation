@@ -30,6 +30,8 @@ void getObjModelInfo(
 
 void setupShaders(GLuint& shaderProgram);
 
+void recompileShaders(GLuint& shaderProgram, std::string& vertexShader, std::string& fragShader);
+
 void setupOffscreenFramebuffer(GLuint* frameBuffer, GLuint* texture);
 
 void show3dModelViewer(
