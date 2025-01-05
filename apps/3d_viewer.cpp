@@ -67,7 +67,7 @@ void getObjModelInfo(
     std::vector<glm::vec3>& vertices,
     std::vector<glm::vec2>& uvs,
     std::vector<glm::vec3>& normals
-    ){
+){
     for(size_t s = 0; s < shapes.size(); s++){
       // Loop over faces(polygon)
       size_t index_offset = 0;
@@ -124,6 +124,7 @@ const char* vertexShaderSource = R"glsl(
     out vec2 uv;
     out vec3 norm;
     
+    uniform float u_time;
     uniform mat4 mvp;
 
     void main()
@@ -138,7 +139,7 @@ const char* vertexShaderSource = R"glsl(
 const char* fragShaderSource = R"glsl(
     #version 330 core
 
-    uniform float time;
+    uniform float u_time;
     uniform sampler2D theTexture;
 
     in vec3 pos;
@@ -149,9 +150,9 @@ const char* fragShaderSource = R"glsl(
 
     void main()
     {
-        //float newR = cos(time)/2; //cos(time*pos.x);
-        //float newG = sin(time)/2; //sin(time*pos.y);
-        //float newB = cos(time)/2; //cos(time*pos.y);
+        //float newR = cos(u_time)/2; //cos(u_time*pos.x);
+        //float newG = sin(u_time)/2; //sin(u_time*pos.y);
+        //float newB = cos(u_time)/2; //cos(u_time*pos.y);
         
         // add some lighting
         vec3 lightPos = vec3(0.0f, 6.0f, -6.0f);
@@ -202,6 +203,65 @@ void setupShaders(GLuint& shaderProgram){
     glBindFragDataLocation(shaderProgram, 0, "outColor");
     glLinkProgram(shaderProgram);
     glUseProgram(shaderProgram);
+    
+    // cleanup
+    glDetachShader(shaderProgram, vertexShader);
+    glDetachShader(shaderProgram, fragmentShader);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+}
+
+void recompileShaders(GLuint& shaderProgram, std::string& vertexShaderSrc, std::string& fragShaderSrc, std::string& err){
+    
+    GLint status;
+    
+    // try compiling vertex shader
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    const char* vertShader = vertexShaderSrc.c_str();
+    glShaderSource(vertexShader, 1, &vertShader, NULL);
+    glCompileShader(vertexShader);
+    
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &status);
+    if(status != GL_TRUE){
+        std::cout << "error compiling vertex shader!\n";
+        err = std::string("error compiling vertex shader!");
+        glDeleteShader(vertexShader);
+        return;
+    }
+    
+    // try compiling frag shader
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    const char* frgShader = fragShaderSrc.c_str();
+    glShaderSource(fragmentShader, 1, &frgShader, NULL);
+    glCompileShader(fragmentShader);
+    
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &status);
+    if(status != GL_TRUE){
+        std::cout << "error compiling fragment shader!\n";
+        err = std::string("error compiling fragment shader!");
+        glDeleteShader(fragmentShader);
+        return;
+    }
+    
+    // delete old shader program only if vertex and frag shaders compiled
+    glDeleteProgram(shaderProgram);
+    
+    // combine shaders into a new program
+    shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    
+    glBindFragDataLocation(shaderProgram, 0, "outColor");
+    glLinkProgram(shaderProgram);
+    glUseProgram(shaderProgram);
+    
+    // cleanup
+    glDetachShader(shaderProgram, vertexShader);
+    glDetachShader(shaderProgram, fragmentShader);
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+    
+    err = "";
 }
 
 // return the GLuint of the texture used for offscreen rendering
@@ -254,7 +314,71 @@ void show3dModelViewer(
 ){
     static char importObjFilepath[64] = "assets/battleship-edit2.obj";
     static std::string filepath(importObjFilepath);
+    
     static bool toggleWireframe = false;
+    
+    static std::string errMsg("");
+    
+    // keep track of time uniform var for shader
+    static float time = 0;
+    
+    static std::string vertexShaderEditable(
+      R"glsl(
+        #version 330 core
+
+        layout(location = 0) in vec3 position;
+        layout(location = 1) in vec2 vertexUV;
+        layout(location = 2) in vec3 normal;
+        
+        out vec3 pos;
+        out vec2 uv;
+        out vec3 norm;
+        
+        uniform float u_time;
+        uniform mat4 mvp;
+
+        void main()
+        {
+            pos = position;
+            uv = vertexUV;
+            norm = normal;
+            gl_Position = mvp * vec4(position, 1.0);
+        }
+      )glsl"
+    );
+    
+    static std::string fragmentShaderEditable(
+      R"glsl(
+        #version 330 core
+
+        uniform float u_time;
+        uniform sampler2D theTexture;
+
+        in vec3 pos;
+        in vec2 uv;
+        in vec3 norm;
+        
+        out vec4 FragColor;
+
+        void main()
+        {   
+            // add some lighting
+            vec3 lightPos = vec3(0.0f, 6.0f, -6.0f);
+            vec3 lightColor = vec3(1.0f, 1.0f, 1.0f);
+            
+            float ambientStrength = 0.1f;
+            vec3 ambient = ambientStrength * lightColor;
+            
+            vec3 n = normalize(norm);
+            vec3 lightDir = normalize(lightPos - pos);
+            float diff = max(dot(n, lightDir), 0.0f);
+            vec3 diffuse = diff * lightColor;
+            
+            vec3 color = (ambient + diffuse) * vec3(texture(theTexture, uv));
+            FragColor = vec4(color, 1.0f);
+        }
+      )glsl"
+    );
     
     bool importObjClicked = ImGui::Button("import .obj model");
     ImGui::SameLine();
@@ -302,6 +426,8 @@ void show3dModelViewer(
     getObjModelInfo(shapes, attrib, verts, uvs, normals);
     
     ImGuiIO& io = ImGui::GetIO();
+    
+    ImGui::Columns(2, "objviewer");
     
     if(glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE){
         std::cout << "framebuffer error: " << glCheckFramebufferStatus(GL_FRAMEBUFFER) << '\n';
@@ -386,11 +512,12 @@ void show3dModelViewer(
         glBufferData(GL_ARRAY_BUFFER, normals.size()*sizeof(glm::vec3), &normals[0], GL_STATIC_DRAW);
         glBindBuffer(GL_ARRAY_BUFFER, 0);
         
-        // for shaders
+        // variables for shaders
         //auto now = std::chrono::high_resolution_clock::now();
         //float time = std::chrono::duration_cast<std::chrono::duration<float>>(now - startTime).count();
-        //GLuint t = glGetUniformLocation(shaderProgram, "time");
-        //glUniform1f(t, time);
+        time += 0.005f; // https://github.com/syncopika/threejs-projects/blob/master/shaders/index.js#L105
+        GLuint t = glGetUniformLocation(shaderProgram, "u_time");
+        glUniform1f(t, time);
         
         // handle any input for trackball
         ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
@@ -466,7 +593,7 @@ void show3dModelViewer(
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
         
         // center the image
-        ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
+        //ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
         ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(viewportWidth, viewportHeight));
         
         glDisableVertexAttribArray(0);
@@ -479,9 +606,30 @@ void show3dModelViewer(
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
     }
     
-    ImGui::Indent(ImGui::GetWindowSize().x/2 - 30); // attempt to center the button
+    //ImGui::Indent(ImGui::GetWindowSize().x/3); // attempt to center the button
     if(ImGui::Button("toggle wireframe")){
         toggleWireframe = !toggleWireframe; 
     }
+    
+    ImGui::NextColumn();
+    
+    // shader editing
+    // https://github.com/ocornut/imgui/issues/4511
+    ImVec2 shaderEditorSize(500, 300);
+    ImGui::InputTextMultiline("vertex shader", &vertexShaderEditable, shaderEditorSize);
+    ImGui::InputTextMultiline("fragment shader", &fragmentShaderEditable, shaderEditorSize);
+    
+    if(ImGui::Button("update shader")){
+      // update shaders
+      // TODO: this appears to work but not immediately after clicking the button? e.g. it seems to take 2 clicks
+      // to get the updated shaders to work how I would expect but not sure why atm.
+      recompileShaders(shaderProgram, vertexShaderEditable, fragmentShaderEditable, errMsg);
+    }
+    
+    if(errMsg != ""){
+      ImGui::SameLine();
+      ImGui::Text(errMsg.c_str());
+    }
 
+    ImGui::Columns();
 }

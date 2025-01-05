@@ -37,6 +37,8 @@ https://github.com/opengl-tutorials/ogl/blob/master/tutorial05_textured_cube/tut
 https://stackoverflow.com/questions/3849052/is-there-an-easy-way-to-get-shadows-in-opengl
 https://learnopengl.com/Lighting/Basic-Lighting
 https://stackoverflow.com/questions/7223623/storing-different-vertex-attributes-in-different-vbos
+https://gamedev.stackexchange.com/questions/124295/how-to-hot-reload-a-glsl-shader
+https://gamedev.stackexchange.com/questions/47910/after-a-succesful-gllinkprogram-should-i-delete-detach-my-shaders
 
 misc stuff ===================================================
 https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-stb_image-libraries/

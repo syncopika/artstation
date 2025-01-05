@@ -15,7 +15,7 @@ void showDrawingCanvas(){
     static float brushSize = 3.0f;
     
     // color wheel stuff
-    static ImVec4 color = ImVec4(1.0f, 1.0f, 1.0f, 1.0f); // note this isn't assignment but just initialization
+    static ImVec4 color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f); // note this isn't assignment but just initialization
     static bool refColor = false;
     static ImVec4 refColor_v(1.0f, 0.0f, 1.0f, 0.5f);
     ImGuiColorEditFlags flags = ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR;
@@ -33,7 +33,7 @@ void showDrawingCanvas(){
     // Draw border and background color
     ImGuiIO& io = ImGui::GetIO();
     ImDrawList* drawList = ImGui::GetWindowDrawList();
-    drawList->AddRectFilled(canvasPos0, canvasPos1, IM_COL32(50, 50, 50, 255));
+    drawList->AddRectFilled(canvasPos0, canvasPos1, IM_COL32(255, 255, 255, 255));
     drawList->AddRect(canvasPos0, canvasPos1, IM_COL32(255, 255, 255, 255));
 
     // This will catch our interactions
