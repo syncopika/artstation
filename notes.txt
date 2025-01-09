@@ -39,6 +39,7 @@ https://learnopengl.com/Lighting/Basic-Lighting
 https://stackoverflow.com/questions/7223623/storing-different-vertex-attributes-in-different-vbos
 https://gamedev.stackexchange.com/questions/124295/how-to-hot-reload-a-glsl-shader
 https://gamedev.stackexchange.com/questions/47910/after-a-succesful-gllinkprogram-should-i-delete-detach-my-shaders
+https://community.khronos.org/t/memory-leak-on-shader-delete-and-create/64559/2 (important bit: call glUseProgram(0) before glDeleteProgram(shaderProgram))
 
 misc stuff ===================================================
 https://solarianprogrammer.com/2019/06/10/c-programming-reading-writing-images-stb_image-libraries/
