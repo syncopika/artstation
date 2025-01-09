@@ -244,6 +244,7 @@ void recompileShaders(GLuint& shaderProgram, std::string& vertexShaderSrc, std::
     }
     
     // delete old shader program only if vertex and frag shaders compiled
+    glUseProgram(0); // important!
     glDeleteProgram(shaderProgram);
     
     // combine shaders into a new program
@@ -519,22 +520,6 @@ void show3dModelViewer(
         GLuint t = glGetUniformLocation(shaderProgram, "u_time");
         glUniform1f(t, time);
         
-        // handle any input for trackball
-        ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-        if(std::abs(dragDelta.x) > 0 || std::abs(dragDelta.y) > 0){
-            //std::cout << "x: " << dragDelta.x << ", y: " << dragDelta.y << '\n';
-            cam.rotate(-dragDelta.x/800, dragDelta.y/800); // moving mouse up is a negative delta y
-        }
-        
-        if(io.MouseWheel != 0.0f){
-            if(io.MouseWheel < 0){
-                // scroll backwards, zoom out
-                cam.zoom(-1.0f);
-            }else{
-                cam.zoom(1.0f);
-            }
-        }
-        
         // set up project matrix
         float fovAngle = 60.0f;
         float aspect = WIDTH / HEIGHT;
@@ -592,8 +577,33 @@ void show3dModelViewer(
         unsigned char* pixelData = new unsigned char[pixelDataLen];
         glGetTexImage(GL_TEXTURE_2D, 0, GL_RGB, GL_UNSIGNED_BYTE, pixelData);
         
-        // center the image
-        //ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90));
+        ImVec2 pos = ImGui::GetCursorScreenPos();
+        
+        // This will catch our interactions with the 3d model display
+        ImGui::InvisibleButton("3dCanvas", ImVec2(viewportWidth, viewportHeight), ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+        
+        // Hovered - this is so we ensure that we take into account only mouse interactions that occur
+        // on this particular canvas. otherwise it could pick up mouse clicks that occur on other windows as well.
+        const bool isHovered = ImGui::IsItemHovered();
+        
+        // handle any input for trackball
+        ImVec2 dragDelta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
+        if(isHovered && (std::abs(dragDelta.x) > 0 || std::abs(dragDelta.y) > 0)){
+            //std::cout << "x: " << dragDelta.x << ", y: " << dragDelta.y << '\n';
+            cam.rotate(-dragDelta.x/800, dragDelta.y/800); // moving mouse up is a negative delta y
+        }
+        
+        if(isHovered && io.MouseWheel != 0.0f){
+            if(io.MouseWheel < 0){
+                // scroll backwards, zoom out
+                cam.zoom(-1.0f);
+            }else{
+                cam.zoom(1.0f);
+            }
+        }
+        
+        //ImGui::SetCursorPos(ImVec2(ImGui::GetWindowSize().x/3, 90)); // center the image
+        ImGui::SetCursorScreenPos(pos);
         ImGui::Image((void *)(intptr_t)offscreenTexture, ImVec2(viewportWidth, viewportHeight));
         
         glDisableVertexAttribArray(0);
