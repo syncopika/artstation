@@ -631,8 +631,6 @@ void show3dModelViewer(
     
     if(ImGui::Button("update shader")){
       // update shaders
-      // TODO: this appears to work but not immediately after clicking the button? e.g. it seems to take 2 clicks
-      // to get the updated shaders to work how I would expect but not sure why atm.
       recompileShaders(shaderProgram, vertexShaderEditable, fragmentShaderEditable, errMsg);
     }
     
