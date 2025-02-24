@@ -524,7 +524,7 @@ void show3dModelViewer(
         float fovAngle = 60.0f;
         float aspect = WIDTH / HEIGHT;
         float near = 0.01f;
-        float far = 100.0f;
+        float far = 1000.0f;
         glm::mat4 perspectiveMat = createPerspectiveMatrix(fovAngle, aspect, near, far);
         
         // store y rotation and rotate based on last y rotation so the model will rotate 360
